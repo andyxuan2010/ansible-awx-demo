@@ -1,7 +1,61 @@
 ---
 layout: default
 title: Ansible AWX Demo
+home: true
 ---
+
+<section class="section-intro" id="guides">
+  <div>
+    <p class="section-kicker">Documentation library</p>
+    <h2>Choose your path</h2>
+    <p>Use the guides below to move from a safe local example to a controlled AWX workflow.</p>
+  </div>
+</section>
+
+<div class="guide-grid">
+  <a class="guide-card guide-card-blue" href="awx.html">
+    <span class="guide-icon">↗</span>
+    <strong>AWX integration</strong>
+    <span>Projects, inventories, execution environments, credentials, job templates, and approvals.</span>
+    <b>Read the guide <span aria-hidden="true">→</span></b>
+  </a>
+  <a class="guide-card guide-card-teal" href="inventory.html">
+    <span class="guide-icon">◇</span>
+    <strong>Inventory design</strong>
+    <span>Safe sample hosts, group hierarchy, targeting intersections, and SCM inventory sources.</span>
+    <b>Explore inventory <span aria-hidden="true">→</span></b>
+  </a>
+  <a class="guide-card guide-card-purple" href="playbooks.html">
+    <span class="guide-icon">▦</span>
+    <strong>Playbooks &amp; usage</strong>
+    <span>Common, Linux, Windows, and role-based examples with deliberate change controls.</span>
+    <b>Browse playbooks <span aria-hidden="true">→</span></b>
+  </a>
+  <a class="guide-card guide-card-orange" href="https://github.com/andyxuan2010/ansible-awx-demo/blob/main/roles/README.md">
+    <span class="guide-icon">⌘</span>
+    <strong>Reusable roles</strong>
+    <span>Role conventions and safe examples for reporting, baselines, updates, and hardening.</span>
+    <b>View roles <span aria-hidden="true">→</span></b>
+  </a>
+</div>
+
+<section class="feature-grid" aria-label="Project highlights">
+  <div class="feature-panel">
+    <span class="feature-label">01 / Coverage</span>
+    <h3>Linux + Windows</h3>
+    <p>Cross-platform playbooks, platform groups, transport examples, and shared operational tasks.</p>
+  </div>
+  <div class="feature-panel">
+    <span class="feature-label">02 / Safety</span>
+    <h3>Public-safe by design</h3>
+    <p>Documentation-only addresses, sanitized names, no Vault material, and CI secret scanning.</p>
+  </div>
+  <div class="feature-panel">
+    <span class="feature-label">03 / Operations</span>
+    <h3>AWX-ready</h3>
+    <p>SCM sync, execution environments, credentials, limits, surveys, workflows, and approvals.</p>
+  </div>
+</section>
 
 This is a sanitized, public-safe Ansible project for learning cross-platform
 playbooks, reusable roles, inventory design, and AWX workflows.
@@ -9,17 +63,6 @@ playbooks, reusable roles, inventory design, and AWX workflows.
 The repository is generated from a private source project. It uses
 documentation-only hosts and contains no production credentials, Vault files,
 private keys, or confidential infrastructure data.
-
-## Start here
-
-Choose the path that matches what you want to review:
-
-| Guide | What it covers |
-| --- | --- |
-| [AWX integration guide](awx.html) | Projects, inventories, execution environments, credentials, job templates, workflows, and publishing |
-| [Inventory guide](inventory.html) | Safe sample inventory structure, groups, host targeting, and AWX inventory sources |
-| [Playbooks and usage](playbooks.html) | Common, Linux, Windows, and role-based examples |
-| [Roles](https://github.com/andyxuan2010/ansible-awx-demo/blob/main/roles/README.md) | Reusable role conventions and the safe demo role |
 
 ## What is included
 

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{ site.description }}">
+    <meta name="theme-color" content="#0b4f71">
+    <title>{{ page.title | default: site.title }} · {{ site.title }}</title>
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  </head>
+  <body class="{% if page.home %}home-page{% else %}document-page{% endif %}">
+    <header class="site-nav">
+      <div class="nav-inner">
+        <a class="brand" href="{{ '/' | relative_url }}" aria-label="{{ site.title }} home">
+          <span class="brand-mark">AW</span>
+          <span class="brand-copy"><strong>ANSIBLE AWX</strong><small>DEMO DOCUMENTATION</small></span>
+        </a>
+        <nav class="nav-primary" aria-label="Primary navigation">
+          <a href="{{ '/' | relative_url }}">Overview</a>
+          <a href="{{ '/' | relative_url }}#guides">Guides</a>
+          <a href="{{ '/awx.html' | relative_url }}">AWX integration</a>
+          <a href="{{ site.github.repository_url }}" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+        </nav>
+        <button class="theme-button" type="button" data-theme-toggle aria-label="Switch to dark theme"><span aria-hidden="true">◐</span></button>
+      </div>
+    </header>
+
+    {% if page.home %}
+      <main>
+        <section class="hero-shell" aria-labelledby="hero-title">
+          <div class="hero-glow hero-glow-one"></div>
+          <div class="hero-glow hero-glow-two"></div>
+          <div class="hero-content content-shell">
+            <div class="hero-copy">
+              <p class="hero-kicker"><span class="pulse-dot"></span> Public-safe automation reference</p>
+              <h1 id="hero-title">Ansible AWX<br><span>demo documentation</span></h1>
+              <p class="hero-description">A practical, cross-platform repository for understanding inventory design, reusable automation, and controlled AWX operations.</p>
+              <div class="hero-actions">
+                <a class="button button-primary" href="#guides">Explore the guides <span aria-hidden="true">↓</span></a>
+                <a class="button button-secondary" href="{{ site.github.repository_url }}">View repository <span aria-hidden="true">↗</span></a>
+              </div>
+              <div class="stat-row" aria-label="Project facts">
+                <div><strong>Linux + Windows</strong><span>platform coverage</span></div>
+                <div><strong>AWX-ready</strong><span>workflow patterns</span></div>
+                <div><strong>Safe sample</strong><span>documentation-only hosts</span></div>
+              </div>
+            </div>
+            <div class="hero-terminal" aria-label="Example Ansible command">
+              <div class="terminal-bar"><span></span><span></span><span></span><small>awx-demo / quick-start</small></div>
+              <div class="terminal-body">
+                <p><i>$</i> ansible-inventory --graph</p>
+                <p class="terminal-muted">@all</p>
+                <p class="terminal-blue">├── @sites</p>
+                <p class="terminal-blue">├── @managed_nodes</p>
+                <p class="terminal-teal">│   ├── @linux</p>
+                <p class="terminal-teal">│   └── @windows</p>
+                <p><i>$</i> ansible-playbook <em>asset_report.yml</em> -l managed_nodes</p>
+                <p class="terminal-success">✓ safe read-only demonstration ready</p>
+              </div>
+            </div>
+          </div>
+        </section>
+        <div class="content-shell home-content">
+          {{ content }}
+        </div>
+      </main>
+    {% else %}
+      <main class="document-main">
+        <div class="content-shell document-layout">
+          <aside class="doc-rail">
+            <p class="rail-label">Documentation</p>
+            <a class="rail-home" href="{{ '/' | relative_url }}">← Back to overview</a>
+            <nav aria-label="Documentation sections">
+              <a href="{{ '/awx.html' | relative_url }}">AWX integration</a>
+              <a href="{{ '/inventory.html' | relative_url }}">Inventory guide</a>
+              <a href="{{ '/playbooks.html' | relative_url }}">Playbooks &amp; usage</a>
+              <a href="https://github.com/andyxuan2010/ansible-awx-demo/blob/main/roles/README.md">Roles on GitHub</a>
+            </nav>
+            <div class="rail-note"><strong>Public-safe snapshot</strong><span>Use private inventory and AWX credentials before connecting to real hosts.</span></div>
+          </aside>
+          <article class="doc-article">
+            <div class="doc-kicker">Ansible AWX demo / reference guide</div>
+            {{ content }}
+          </article>
+        </div>
+      </main>
+    {% endif %}
+
+    <footer class="site-footer">
+      <div class="content-shell footer-inner">
+        <span><strong>{{ site.title }}</strong> · sanitized public documentation</span>
+        <a href="{{ site.github.repository_url }}">View source on GitHub <span aria-hidden="true">↗</span></a>
+      </div>
+    </footer>
+
+    <script>
+      (() => {
+        const root = document.documentElement;
+        const button = document.querySelector('[data-theme-toggle]');
+        let saved = null;
+        try { saved = window.localStorage.getItem('awx-theme'); } catch (error) { /* storage may be unavailable */ }
+        if (saved === 'dark' || saved === 'light') root.dataset.theme = saved;
+        const update = () => {
+          const dark = root.dataset.theme === 'dark';
+          button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+          button.setAttribute('aria-pressed', String(dark));
+        };
+        button.addEventListener('click', () => {
+          root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+          try { window.localStorage.setItem('awx-theme', root.dataset.theme); } catch (error) { /* ignore storage failures */ }
+          update();
+        });
+        update();
+      })();
+    </script>
+  </body>
+</html>

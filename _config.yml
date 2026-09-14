@@ -3,6 +3,8 @@ title: Ansible AWX Demo
 description: A sanitized Ansible project showing cross-platform playbooks, reusable roles, inventory design, and AWX workflows.
 url: https://andyxuan.ca
 baseurl: /ansible-awx-demo
+# Cayman remains available as a fallback, while _layouts/default.html and
+# assets/css/style.scss provide the site's custom documentation shell.
 theme: jekyll-theme-cayman
 markdown: kramdown
 show_downloads: false
