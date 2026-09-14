@@ -11,17 +11,19 @@
   <body class="{% if page.home %}home-page{% else %}document-page{% endif %}">
     <header class="site-nav">
       <div class="nav-inner">
-        <a class="brand" href="{{ '/' | relative_url }}" aria-label="{{ site.title }} home">
-          <span class="brand-mark">AW</span>
-          <span class="brand-copy"><strong>ANSIBLE AWX</strong><small>DEMO DOCUMENTATION</small></span>
-        </a>
-        <nav class="nav-primary" aria-label="Primary navigation">
-          <a href="{{ '/' | relative_url }}">Overview</a>
-          <a href="{{ '/' | relative_url }}#guides">Guides</a>
-          <a href="{{ '/awx.html' | relative_url }}">AWX integration</a>
+        <nav class="nav-left" aria-label="Primary navigation">
+          <a href="{{ '/' | relative_url }}"><span aria-hidden="true">⌂</span> Home</a>
+          <a href="{{ '/' | relative_url }}#guides"><span aria-hidden="true">◆</span> Projects</a>
+          <a href="{{ '/awx.html' | relative_url }}"><span aria-hidden="true">▤</span> Documentation</a>
           <a href="{{ site.github.repository_url }}" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
         </nav>
-        <button class="theme-button" type="button" data-theme-toggle aria-label="Switch to dark theme"><span aria-hidden="true">◐</span></button>
+        <a class="site-brand" href="{{ '/' | relative_url }}" aria-label="{{ site.title }} home">
+          <span class="brand-mark">AW</span>
+          <span class="brand-copy"><strong>Ansible AWX</strong><small>PUBLIC AUTOMATION DOCUMENTATION</small></span>
+        </a>
+        <div class="nav-right">
+          <button class="theme-button" type="button" data-theme-toggle aria-label="Switch to dark theme"><span aria-hidden="true">◐</span></button>
+        </div>
       </div>
     </header>
 
