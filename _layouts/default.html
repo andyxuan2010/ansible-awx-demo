@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="{{ site.description }}">
     <meta name="theme-color" content="#0b4f71">
-    <title>{{ page.title | default: site.title }} · {{ site.title }}</title>
-    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+    <title>{% if page.home %}{{ site.title }}{% else %}{{ page.title | default: site.title }} · {{ site.title }}{% endif %}</title>
+    {% if site.github.build_revision %}{% assign css_version = site.github.build_revision %}{% else %}{% assign css_version = site.time | date: '%s' %}{% endif %}
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}?v={{ css_version }}">
   </head>
   <body class="{% if page.home %}home-page{% else %}document-page{% endif %}">
     <header class="site-nav">
