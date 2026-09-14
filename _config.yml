@@ -1,7 +1,19 @@
+# GitHub Pages configuration for the generated public AWX demo site.
+title: Ansible AWX Demo
+description: A sanitized Ansible project showing cross-platform playbooks, reusable roles, inventory design, and AWX workflows.
+url: https://andyxuan.ca
+baseurl: /ansible-awx-demo
+theme: jekyll-theme-cayman
+markdown: kramdown
+show_downloads: false
+
+github:
+  is_project_page: true
+  repository_url: https://github.com/andyxuan2010/ansible-awx-demo
+
 # Ansible uses Jinja expressions such as {{ variable | default(value) }}.
 # Exclude YAML source files from Jekyll so those expressions are not parsed as
-# Liquid templates during the GitHub Pages build. Markdown documentation is
-# still rendered normally, including README.md as the site index.
+# Liquid templates during the GitHub Pages build.
 exclude:
   - "*.yml"
   - "*.yaml"
