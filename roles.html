@@ -1,0 +1,8 @@
+---
+layout: default
+title: Roles
+permalink: /roles.html
+---
+
+{% capture roles_markdown %}{% include_relative roles/README.md %}{% endcapture %}
+{{ roles_markdown | markdownify }}
