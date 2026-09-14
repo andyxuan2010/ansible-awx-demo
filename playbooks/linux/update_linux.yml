@@ -1,0 +1,70 @@
+---
+- name: Update packages on all managed Linux systems
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+  serial: "{{ patch_serial }}"
+  any_errors_fatal: true
+  vars:
+    patch_serial: 1
+    patch_reboot_after_updates: false
+    patch_reboot_timeout: 900
+    patch_reboot_pre_delay: 5
+    patch_reboot_post_delay: 30
+
+  pre_tasks:
+    - name: Verify supported Linux package manager
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.system == "Linux"
+          - ansible_facts.pkg_mgr in ["apt", "dnf", "dnf5", "yum"]
+        fail_msg: >-
+          {{ inventory_hostname }} does not have a supported package manager.
+          Detected: {{ ansible_facts.pkg_mgr | default('unknown') }}
+
+  tasks:
+    - name: Update Debian and Ubuntu packages
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+        upgrade: dist
+      register: linux_update_apt
+      when: ansible_facts.os_family == "Debian"
+
+    - name: Update RHEL 7 packages with the YUM CLI
+      ansible.builtin.raw: yum -y update
+      register: rhel7_update
+      changed_when:
+        - rhel7_update.rc == 0
+        - "'No packages marked for update' not in rhel7_update.stdout"
+      when:
+        - ansible_facts.os_family == "RedHat"
+        - ansible_facts.distribution_major_version == "7"
+
+    - name: Update newer Red Hat-family packages with DNF
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_only: true
+        # Permit the rest of the transaction to proceed when a repository
+        # advertises an update whose dependencies are unavailable. DNF skips
+        # that package and updates the resolvable packages instead.
+        nobest: true
+      register: linux_update_dnf
+      when:
+        - ansible_facts.os_family == "RedHat"
+        - ansible_facts.distribution_major_version != "7"
+
+  post_tasks:
+    - name: Reboot patched Linux host when explicitly requested
+      ansible.builtin.reboot:
+        reboot_timeout: "{{ patch_reboot_timeout }}"
+        pre_reboot_delay: "{{ patch_reboot_pre_delay }}"
+        post_reboot_delay: "{{ patch_reboot_post_delay }}"
+        test_command: whoami
+      when:
+        - patch_reboot_after_updates | bool
+        - >-
+          (linux_update_apt.changed | default(false)) or
+          (rhel7_update.changed | default(false)) or
+          (linux_update_dnf.changed | default(false))

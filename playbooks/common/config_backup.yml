@@ -1,0 +1,59 @@
+---
+- name: Back up a Linux path when explicitly requested
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [maintenance, backup]
+  vars:
+    create_backup: false
+    backup_source_path: /etc/ansible-management
+    backup_destination_path: /var/backups/ansible-management.tar.gz
+  tasks:
+    - name: Explain that Linux backups are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e create_backup=true to back up {{ backup_source_path }}."
+      when: not (create_backup | bool)
+
+    - name: Create the Linux backup directory
+      ansible.builtin.file:
+        path: "{{ backup_destination_path | dirname }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+      when: create_backup | bool
+
+    - name: Create the Linux configuration backup
+      ansible.builtin.command:
+        argv:
+          - tar
+          - -czf
+          - "{{ backup_destination_path }}"
+          - -C
+          - "{{ backup_source_path | dirname }}"
+          - "{{ backup_source_path | basename }}"
+      changed_when: true
+      when: create_backup | bool
+
+- name: Back up a Windows path when explicitly requested
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [maintenance, backup]
+  vars:
+    create_backup: false
+    backup_source_path: 'C:\ProgramData\AnsibleManagement'
+    backup_destination_path: 'C:\ProgramData\AnsibleManagement.zip'
+  tasks:
+    - name: Explain that Windows backups are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e create_backup=true to back up {{ backup_source_path }}."
+      when: not (create_backup | bool)
+
+    - name: Create the Windows configuration backup
+      ansible.windows.win_powershell:
+        script: |
+          if (-not (Test-Path -LiteralPath '{{ backup_source_path }}')) {
+              throw "Backup source does not exist: {{ backup_source_path }}"
+          }
+          Compress-Archive -Path '{{ backup_source_path }}' -DestinationPath '{{ backup_destination_path }}' -Force
+      when: create_backup | bool

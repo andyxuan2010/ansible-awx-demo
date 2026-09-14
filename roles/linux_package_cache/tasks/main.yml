@@ -1,0 +1,50 @@
+---
+- name: Explain that package-cache maintenance is disabled by default
+  ansible.builtin.debug:
+    msg: "Package-cache maintenance is disabled; set linux_package_cache_update=true to enable it."
+  when: not (linux_package_cache_update | bool or linux_package_cache_clean | bool)
+  tags:
+    - always
+    - packages
+
+- name: Refresh the Debian package cache
+  ansible.builtin.apt:
+    update_cache: true
+  when:
+    - linux_package_cache_update | bool
+    - ansible_facts.os_family == "Debian"
+  tags:
+    - maintenance
+    - packages
+
+- name: Refresh the Red Hat package cache
+  ansible.builtin.dnf:
+    update_cache: true
+  when:
+    - linux_package_cache_update | bool
+    - ansible_facts.os_family == "RedHat"
+    - ansible_facts.pkg_mgr in ["dnf", "dnf5"]
+  tags:
+    - maintenance
+    - packages
+
+- name: Clean the Debian package cache
+  ansible.builtin.apt:
+    autoclean: true
+  when:
+    - linux_package_cache_clean | bool
+    - ansible_facts.os_family == "Debian"
+  tags:
+    - maintenance
+    - packages
+
+- name: Expire the Red Hat package cache
+  ansible.builtin.command: "{{ ansible_facts.pkg_mgr }} clean expire-cache"
+  changed_when: false
+  when:
+    - linux_package_cache_clean | bool
+    - ansible_facts.os_family == "RedHat"
+    - ansible_facts.pkg_mgr in ["dnf", "dnf5"]
+  tags:
+    - maintenance
+    - packages

@@ -1,0 +1,46 @@
+---
+- name: Report or set the Linux timezone
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [configuration, time]
+  vars:
+    apply_changes: false
+    timezone_name: Etc/UTC
+  tasks:
+    - name: Read the Linux timezone
+      ansible.builtin.command: timedatectl show --property=Timezone --value
+      register: linux_timezone
+      changed_when: false
+      failed_when: false
+
+    - name: Display the Linux timezone
+      ansible.builtin.debug:
+        var: linux_timezone.stdout
+
+    - name: Set the Linux timezone when explicitly requested
+      ansible.builtin.command: timedatectl set-timezone "{{ timezone_name }}"
+      changed_when: true
+      when: apply_changes | bool
+
+- name: Report or set the Windows timezone
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [configuration, time]
+  vars:
+    apply_changes: false
+    timezone_name: UTC
+  tasks:
+    - name: Read the Windows timezone
+      ansible.windows.win_powershell:
+        script: Get-TimeZone | Select-Object Id, DisplayName
+      register: windows_timezone
+      changed_when: false
+
+    - name: Display the Windows timezone
+      ansible.builtin.debug:
+        var: windows_timezone.output
+
+    - name: Set the Windows timezone when explicitly requested
+      ansible.windows.win_command: "tzutil.exe /s \"{{ timezone_name }}\""
+      when: apply_changes | bool

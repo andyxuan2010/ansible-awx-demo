@@ -1,0 +1,6 @@
+Managed by Ansible
+site={{ site_name | default('unknown') }}
+site_code={{ site_code | default('unknown') }}
+node={{ node_name | default(inventory_hostname) }}
+node_role={{ node_role | default('unknown') }}
+fqdn={{ ansible_fqdn | default('unknown') }}

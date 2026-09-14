@@ -1,0 +1,43 @@
+---
+- name: Write the management marker on Linux
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+  tags: [maintenance, marker]
+  vars:
+    management_marker_path: /etc/ansible-management/managed-by
+  tasks:
+    - name: Create Linux management directory
+      ansible.builtin.file:
+        path: "{{ management_marker_path | dirname }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Write Linux management marker
+      ansible.builtin.copy:
+        dest: "{{ management_marker_path }}"
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          Managed by Ansible
+          site={{ site_name | default('unknown') }}
+          node={{ inventory_hostname }}
+          fqdn={{ ansible_fqdn | default('unknown') }}
+
+- name: Write the management marker on Windows
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [maintenance, marker]
+  vars:
+    management_marker_path: C:\ProgramData\AnsibleManagement\managed-by.txt
+  tasks:
+    - name: Write Windows management marker
+      ansible.windows.win_copy:
+        dest: "{{ management_marker_path }}"
+        content: |
+          Managed by Ansible
+          site={{ site_name | default('unknown') }}
+          node={{ inventory_hostname }}

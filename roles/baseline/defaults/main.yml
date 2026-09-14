@@ -1,0 +1,4 @@
+---
+baseline_manage_marker: true
+baseline_packages: []
+baseline_managed_marker_path: /etc/ansible-management

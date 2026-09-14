@@ -1,0 +1,9 @@
+---
+- name: Apply the common Linux baseline to managed nodes
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+  roles:
+    - role: baseline
+      tags:
+        - baseline

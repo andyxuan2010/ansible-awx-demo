@@ -1,0 +1,37 @@
+---
+- name: Check whether Linux hosts require a reboot
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, maintenance]
+  tasks:
+    - name: Check the Linux reboot-required marker
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: linux_reboot_required
+
+    - name: Display the Linux reboot status
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} reboot_required={{ linux_reboot_required.stat.exists | default(false) }}"
+
+- name: Check whether Windows hosts require a reboot
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, maintenance]
+  tasks:
+    - name: Check Windows pending reboot indicators
+      ansible.windows.win_powershell:
+        script: |
+          $paths = @(
+            'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending',
+            'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
+          )
+          [pscustomobject]@{
+            RebootRequired = [bool]($paths | Where-Object { Test-Path $_ })
+          }
+      register: windows_reboot_required
+      changed_when: false
+
+    - name: Display the Windows reboot status
+      ansible.builtin.debug:
+        var: windows_reboot_required.output

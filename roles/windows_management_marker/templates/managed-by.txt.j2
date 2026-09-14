@@ -1,0 +1,5 @@
+Managed by Ansible
+site={{ site_name | default('unknown') }}
+node={{ inventory_hostname }}
+hostname={{ ansible_hostname | default('unknown') }}
+os={{ ansible_distribution | default('Windows') }}

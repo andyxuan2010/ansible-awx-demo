@@ -1,0 +1,33 @@
+---
+- name: Audit local Linux accounts
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [security, audit]
+  tasks:
+    - name: Collect local Linux accounts
+      ansible.builtin.command: >-
+        awk -F: '{print $1 ":" $3 ":" $7}' /etc/passwd
+      register: linux_accounts
+      changed_when: false
+
+    - name: Display local Linux accounts
+      ansible.builtin.debug:
+        var: linux_accounts.stdout_lines
+
+- name: Audit local Windows accounts
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [security, audit]
+  tasks:
+    - name: Collect local Windows accounts
+      ansible.windows.win_powershell:
+        script: |
+          Get-LocalUser |
+            Select-Object Name, Enabled, LastLogon, PasswordRequired
+      register: windows_accounts
+      changed_when: false
+
+    - name: Display local Windows accounts
+      ansible.builtin.debug:
+        var: windows_accounts.output

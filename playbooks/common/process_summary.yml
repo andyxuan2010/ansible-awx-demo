@@ -1,0 +1,34 @@
+---
+- name: Report top Linux processes
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, processes]
+  tasks:
+    - name: Collect top Linux processes
+      ansible.builtin.shell: |
+        set -o pipefail
+        ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -n 11
+      register: linux_processes
+      changed_when: false
+
+    - name: Display top Linux processes
+      ansible.builtin.debug:
+        var: linux_processes.stdout_lines
+
+- name: Report top Windows processes
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, processes]
+  tasks:
+    - name: Collect top Windows processes
+      ansible.windows.win_powershell:
+        script: |
+          Get-Process |
+            Sort-Object CPU -Descending |
+            Select-Object -First 10 Name, Id, CPU, WorkingSet64
+      register: windows_processes
+      changed_when: false
+
+    - name: Display top Windows processes
+      ansible.builtin.debug:
+        var: windows_processes.output

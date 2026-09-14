@@ -1,0 +1,36 @@
+---
+- name: Report Linux disk usage
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, disk]
+  tasks:
+    - name: Collect mounted filesystem usage
+      ansible.builtin.command: df -hP
+      register: linux_disk_usage
+      changed_when: false
+
+    - name: Display Linux disk usage
+      ansible.builtin.debug:
+        var: linux_disk_usage.stdout_lines
+
+- name: Report Windows disk usage
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, disk]
+  tasks:
+    - name: Collect fixed disk usage
+      ansible.windows.win_powershell:
+        script: |
+          Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
+            Select-Object DeviceID, VolumeName, Size, FreeSpace,
+              @{Name='FreePercent';Expression={
+                if ($_.Size) { [math]::Round(($_.FreeSpace / $_.Size) * 100, 1) }
+                else { 0 }
+              }}
+      register: windows_disk_usage
+      changed_when: false
+
+    - name: Display Windows disk usage
+      ansible.builtin.debug:
+        var: windows_disk_usage.output

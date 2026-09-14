@@ -1,0 +1,4 @@
+---
+windows_management_marker_enabled: true
+windows_management_marker_directory: 'C:\ProgramData\AnsibleManagement'
+windows_management_marker_path: 'C:\ProgramData\AnsibleManagement\managed-by.txt'

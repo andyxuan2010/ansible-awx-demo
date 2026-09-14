@@ -1,0 +1,7 @@
+[sshd]
+enabled = true
+port = {{ exposed_ubuntu_hardening_ssh_port }}
+backend = systemd
+bantime = {{ exposed_ubuntu_hardening_fail2ban_bantime }}
+findtime = {{ exposed_ubuntu_hardening_fail2ban_findtime }}
+maxretry = {{ exposed_ubuntu_hardening_fail2ban_maxretry }}

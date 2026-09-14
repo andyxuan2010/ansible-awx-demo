@@ -1,0 +1,48 @@
+---
+- name: Check a TCP port from Linux hosts
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, network]
+  vars:
+    check_host: "{{ ansible_host | default(inventory_hostname) }}"
+    check_port: 22
+    check_timeout: 5
+  tasks:
+    - name: Check the requested TCP port on Linux
+      ansible.builtin.wait_for:
+        host: "{{ check_host }}"
+        port: "{{ check_port }}"
+        timeout: "{{ check_timeout }}"
+        state: started
+      register: linux_port_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display the Linux TCP port result
+      ansible.builtin.debug:
+        var: linux_port_check
+
+- name: Check a TCP port from Windows hosts
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, network]
+  vars:
+    check_host: "{{ ansible_host | default(inventory_hostname) }}"
+    check_port: 5985
+  tasks:
+    - name: Check the requested TCP port on Windows
+      ansible.windows.win_powershell:
+        script: |
+          $result = Test-NetConnection -ComputerName '{{ check_host }}' -Port {{ check_port }} -WarningAction SilentlyContinue
+          [pscustomobject]@{
+            ComputerName = $result.ComputerName
+            RemotePort = $result.RemotePort
+            TcpTestSucceeded = $result.TcpTestSucceeded
+          }
+      register: windows_port_check
+      changed_when: false
+      failed_when: false
+
+    - name: Display the Windows TCP port result
+      ansible.builtin.debug:
+        var: windows_port_check.output

@@ -1,0 +1,161 @@
+---
+- name: Audit Linux SSH access for the ansible account
+  hosts: "managed_nodes:&linux"
+  gather_facts: true
+  become: false
+  tags: [ssh_audit, ssh, validation]
+  vars:
+    ssh_audit_user: ansible
+    # Optional controller-side public key file. In AWX, leave this empty
+    # because the Machine credential key is intentionally not exposed to jobs.
+    ssh_audit_public_key_file: ""
+
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Check for a listener on TCP port 22 with ss
+      ansible.builtin.command:
+        argv:
+          - ss
+          - -H
+          - -ltn
+          - "sport = :22"
+      register: ssh_port_22_ss_check
+      changed_when: false
+      failed_when: false
+
+    - name: Check for a listener on TCP port 22 with netstat when ss is unavailable
+      ansible.builtin.command:
+        argv:
+          - netstat
+          - -lnt
+      register: ssh_port_22_netstat_check
+      changed_when: false
+      failed_when: false
+      when: ssh_port_22_ss_check.rc | default(127) != 0
+
+    - name: Check whether the ansible user exists
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ ssh_audit_user }}"
+        fail_key: false
+
+    - name: Set the ansible user audit facts
+      ansible.builtin.set_fact:
+        ssh_audit_service_units: >-
+          {{ ansible_facts.services | dict2items
+             | selectattr('key', 'match', '^(ssh|sshd)(\\.service)?$') | list }}
+        ssh_audit_user_exists: >-
+          {{ ssh_audit_user in (ansible_facts.getent_passwd | default({})) }}
+        ssh_audit_port_22_listening: >-
+          {{ (ssh_port_22_ss_check.stdout | default('') | trim | length) > 0
+             or ((ssh_port_22_netstat_check.stdout | default('')) is search(':22\\s')) }}
+        ssh_audit_service_enabled: >-
+          {{ (ansible_facts.services | dict2items
+              | selectattr('key', 'match', '^(ssh|sshd)(\\.service)?$')
+              | selectattr('value.status', 'in', ['enabled', 'enabled-runtime'])
+              | list | length) > 0 }}
+        ssh_audit_service_running: >-
+          {{ (ansible_facts.services | dict2items
+              | selectattr('key', 'match', '^(ssh|sshd)(\\.service)?$')
+              | selectattr('value.state', 'equalto', 'running') | list | length) > 0 }}
+        ssh_audit_user_home: >-
+          {{ (ansible_facts.getent_passwd[ssh_audit_user][4]
+              if ssh_audit_user in (ansible_facts.getent_passwd | default({})) else '') }}
+
+    - name: Identify the SSH account used by this Ansible run
+      ansible.builtin.command: id -un
+      register: ssh_audit_authenticated_user
+      changed_when: false
+      failed_when: false
+
+    - name: Check the ansible user's authorized_keys file
+      ansible.builtin.stat:
+        path: "{{ ssh_audit_user_home }}/.ssh/authorized_keys"
+      register: ssh_audit_authorized_keys_stat
+      when: ssh_audit_user_exists and (ssh_audit_user_home | length > 0)
+
+    - name: Count usable public keys in authorized_keys
+      ansible.builtin.command:
+        argv:
+          - awk
+          - >-
+            $1 ~ /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)/
+            { count++ } END { print count + 0 }
+          - "{{ ssh_audit_user_home }}/.ssh/authorized_keys"
+      register: ssh_audit_authorized_key_count
+      changed_when: false
+      failed_when: false
+      when:
+        - ssh_audit_authorized_keys_stat.stat.exists | default(false)
+        - ssh_audit_authorized_keys_stat.stat.isreg | default(false)
+
+    - name: Optionally read the expected public key from the control node
+      ansible.builtin.set_fact:
+        ssh_audit_expected_key_data: >-
+          {{ (lookup('ansible.builtin.file', ssh_audit_public_key_file).split())[0:2]
+             | join(' ') }}
+      when: ssh_audit_public_key_file | length > 0
+      delegate_to: localhost
+      delegate_facts: true
+
+    - name: Optionally verify the expected public key is authorized
+      ansible.builtin.command:
+        argv:
+          - awk
+          - -v
+          - "expected={{ hostvars['localhost'].ssh_audit_expected_key_data }}"
+          - '$1 " " $2 == expected { found=1 } END { exit(found ? 0 : 1) }'
+          - "{{ ssh_audit_user_home }}/.ssh/authorized_keys"
+      register: ssh_audit_expected_key_check
+      changed_when: false
+      failed_when: false
+      when:
+        - ssh_audit_public_key_file | length > 0
+        - ssh_audit_authorized_keys_stat.stat.exists | default(false)
+        - ssh_audit_authorized_keys_stat.stat.isreg | default(false)
+
+    - name: Report SSH access audit
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          ssh_service_units: "{{ ssh_audit_service_units | map(attribute='key') | list }}"
+          ssh_service_enabled: "{{ ssh_audit_service_enabled }}"
+          ssh_service_running: "{{ ssh_audit_service_running }}"
+          port_22_listening: "{{ ssh_audit_port_22_listening }}"
+          ansible_user_exists: "{{ ssh_audit_user_exists }}"
+          ansible_user_home: "{{ ssh_audit_user_home | default('') }}"
+          authorized_keys_exists: "{{ ssh_audit_authorized_keys_stat.stat.exists | default(false) }}"
+          authorized_key_count: "{{ ssh_audit_authorized_key_count.stdout | default('0') | trim }}"
+          authenticated_ssh_user: "{{ ssh_audit_authenticated_user.stdout | default('unknown') | trim }}"
+          authenticated_as_ansible: >-
+            {{ (ssh_audit_authenticated_user.stdout | default('') | trim) == ssh_audit_user }}
+          expected_public_key_check: >-
+            {{ 'passed' if (ssh_audit_public_key_file | length > 0
+                and (ssh_audit_expected_key_check.rc | default(1)) == 0)
+               else ('not_run' if ssh_audit_public_key_file | length == 0 else 'failed') }}
+
+- name: Audit Site A Windows OpenSSH access for the ansible account
+  hosts: "managed_nodes:&site_a:&windows"
+  gather_facts: false
+  become: false
+  vars:
+    ssh_audit_user: ansible
+    ssh_audit_public_key_file: ""
+  tags: [ssh_audit, ssh, validation]
+  tasks:
+    - name: Run the Windows SSH audit tasks
+      ansible.builtin.include_tasks: tasks/ssh_access_windows.yml
+
+- name: Audit Site B Windows OpenSSH access for the ansible account
+  hosts: "managed_nodes:&site_b:&windows"
+  gather_facts: false
+  become: false
+  vars:
+    ssh_audit_user: ansible
+    ssh_audit_public_key_file: ""
+  tags: [ssh_audit, ssh, validation]
+  tasks:
+    - name: Run the Windows SSH audit tasks
+      ansible.builtin.include_tasks: tasks/ssh_access_windows.yml

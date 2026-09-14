@@ -1,0 +1,25 @@
+---
+exposed_ubuntu_hardening_apply: false
+exposed_ubuntu_hardening_allowed_node_ids:
+  - demo-ubuntu-02
+  - demo-ubuntu-01
+exposed_ubuntu_hardening_enable_ufw: true
+exposed_ubuntu_hardening_disable_password_authentication: false
+exposed_ubuntu_hardening_ssh_dropin_path: /etc/ssh/sshd_config.d/00-ansible-management-hardening.conf
+exposed_ubuntu_hardening_ssh_service: ssh
+exposed_ubuntu_hardening_ssh_port: "{{ ansible_port | default(22) }}"
+exposed_ubuntu_hardening_ufw_interface: tailscale0
+exposed_ubuntu_hardening_packages:
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+exposed_ubuntu_hardening_ssh_settings:
+  PermitRootLogin: "no"
+  X11Forwarding: "no"
+  AllowAgentForwarding: "no"
+  MaxAuthTries: "3"
+  LoginGraceTime: "30"
+  KbdInteractiveAuthentication: "no"
+exposed_ubuntu_hardening_fail2ban_bantime: 1h
+exposed_ubuntu_hardening_fail2ban_findtime: 10m
+exposed_ubuntu_hardening_fail2ban_maxretry: 5

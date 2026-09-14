@@ -1,0 +1,39 @@
+---
+- name: Reboot managed Linux systems when explicitly requested
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  serial: 1
+  tags: [maintenance, reboot]
+  vars:
+    confirm_reboot: false
+  tasks:
+    - name: Explain that Linux reboot is disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e confirm_reboot=true to reboot {{ inventory_hostname }}."
+      when: not (confirm_reboot | bool)
+
+    - name: Reboot Linux host
+      ansible.builtin.reboot:
+        msg: "Ansible requested reboot"
+        reboot_timeout: 900
+      when: confirm_reboot | bool
+
+- name: Reboot managed Windows systems when explicitly requested
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  serial: 1
+  tags: [maintenance, reboot]
+  vars:
+    confirm_reboot: false
+  tasks:
+    - name: Explain that Windows reboot is disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e confirm_reboot=true to reboot {{ inventory_hostname }}."
+      when: not (confirm_reboot | bool)
+
+    - name: Reboot Windows host
+      ansible.windows.win_reboot:
+        msg: "Ansible requested reboot"
+        reboot_timeout: 900
+      when: confirm_reboot | bool

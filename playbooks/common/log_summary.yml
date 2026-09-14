@@ -1,0 +1,34 @@
+---
+- name: Collect recent Linux warning logs
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, logs]
+  tasks:
+    - name: Read recent Linux warning logs
+      ansible.builtin.command: journalctl -p warning -n 20 --no-pager
+      register: linux_logs
+      changed_when: false
+      failed_when: false
+
+    - name: Display recent Linux warning logs
+      ansible.builtin.debug:
+        var: linux_logs.stdout_lines
+
+- name: Collect recent Windows system events
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, logs]
+  tasks:
+    - name: Read recent Windows system events
+      ansible.windows.win_powershell:
+        script: |
+          Get-WinEvent -LogName System -MaxEvents 20 |
+            Select-Object TimeCreated, Id, LevelDisplayName, ProviderName, Message
+      register: windows_logs
+      changed_when: false
+      failed_when: false
+
+    - name: Display recent Windows system events
+      ansible.builtin.debug:
+        var: windows_logs.output

@@ -1,0 +1,32 @@
+---
+- name: Report Linux network shares
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, storage]
+  tasks:
+    - name: Collect Linux NFS and SMB mounts
+      ansible.builtin.command: findmnt --real --types nfs,nfs4,cifs --output TARGET,SOURCE,FSTYPE,OPTIONS
+      register: linux_shares
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux network shares
+      ansible.builtin.debug:
+        var: linux_shares.stdout_lines
+
+- name: Report Windows SMB shares
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, storage]
+  tasks:
+    - name: Collect Windows SMB shares
+      ansible.windows.win_powershell:
+        script: Get-SmbShare | Select-Object Name, Path, Description, ShareState
+      register: windows_shares
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows SMB shares
+      ansible.builtin.debug:
+        var: windows_shares.output

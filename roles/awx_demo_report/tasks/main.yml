@@ -1,0 +1,10 @@
+---
+- name: Display the AWX role execution context
+  ansible.builtin.debug:
+    msg:
+      label: "{{ awx_demo_report_label }}"
+      inventory_hostname: "{{ inventory_hostname }}"
+      groups: "{{ group_names }}"
+      ansible_connection: "{{ ansible_connection | default('unknown') }}"
+      ansible_user: "{{ ansible_user | default('unknown') }}"
+      operating_system: "{{ ansible_facts.distribution | default(ansible_facts.os_family | default('unknown')) }}"

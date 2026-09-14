@@ -1,0 +1,15 @@
+---
+- name: Harden exposed Ubuntu endpoints
+  hosts: "site_c:site_d:&ubuntu"
+  become: true
+  gather_facts: true
+  serial: 1
+  tags:
+    - security
+    - hardening
+    - exposed_ubuntu
+  roles:
+    - role: exposed_ubuntu_hardening
+      tags:
+        - security
+        - hardening

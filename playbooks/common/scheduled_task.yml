@@ -1,0 +1,61 @@
+---
+- name: Manage a Linux scheduled task when explicitly requested
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [configuration, scheduling]
+  vars:
+    apply_changes: false
+    scheduled_task_name: ansible-management-example
+    scheduled_task_command: ""
+    scheduled_task_schedule: "0 2 * * *"
+  tasks:
+    - name: Explain that Linux scheduled task changes are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true and provide scheduled_task_command to manage a cron entry."
+      when: not (apply_changes | bool) or scheduled_task_command | length == 0
+
+    - name: Ensure the Linux cron entry
+      ansible.builtin.cron:
+        name: "{{ scheduled_task_name }}"
+        minute: "{{ scheduled_task_schedule.split()[0] }}"
+        hour: "{{ scheduled_task_schedule.split()[1] }}"
+        day: "{{ scheduled_task_schedule.split()[2] }}"
+        month: "{{ scheduled_task_schedule.split()[3] }}"
+        weekday: "{{ scheduled_task_schedule.split()[4] }}"
+        job: "{{ scheduled_task_command }}"
+      when:
+        - apply_changes | bool
+        - scheduled_task_command | length > 0
+
+- name: Manage a Windows scheduled task when explicitly requested
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [configuration, scheduling]
+  vars:
+    apply_changes: false
+    scheduled_task_name: AnsibleManagementExample
+    scheduled_task_command: ""
+    scheduled_task_time: "02:00"
+  tasks:
+    - name: Explain that Windows scheduled task changes are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true and provide scheduled_task_command to manage a scheduled task."
+      when: not (apply_changes | bool) or scheduled_task_command | length == 0
+
+    - name: Ensure the Windows scheduled task
+      community.windows.win_scheduled_task:
+        name: "{{ scheduled_task_name }}"
+        description: Managed by Ansible
+        actions:
+          - path: powershell.exe
+            arguments: "-NoProfile -NonInteractive -Command \"{{ scheduled_task_command }}\""
+        triggers:
+          - type: daily
+            start_boundary: "{{ scheduled_task_time }}"
+        username: SYSTEM
+        run_level: highest
+        state: present
+      when:
+        - apply_changes | bool
+        - scheduled_task_command | length > 0

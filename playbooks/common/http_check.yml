@@ -1,0 +1,60 @@
+---
+- name: Check an HTTP endpoint from Linux hosts
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, network]
+  vars:
+    healthcheck_url: ""
+    healthcheck_timeout: 10
+  tasks:
+    - name: Explain that HTTP checking needs a URL
+      ansible.builtin.debug:
+        msg: "Set -e healthcheck_url=https://example.invalid to check an endpoint."
+      when: healthcheck_url | length == 0
+
+    - name: Check the requested HTTP endpoint on Linux
+      ansible.builtin.uri:
+        url: "{{ healthcheck_url }}"
+        method: GET
+        return_content: false
+        timeout: "{{ healthcheck_timeout }}"
+        status_code: [200, 201, 202, 204, 301, 302, 401, 403]
+      register: linux_http_check
+      changed_when: false
+      failed_when: false
+      when: healthcheck_url | length > 0
+
+    - name: Display the Linux HTTP result
+      ansible.builtin.debug:
+        var: linux_http_check
+      when: healthcheck_url | length > 0
+
+- name: Check an HTTP endpoint from Windows hosts
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, network]
+  vars:
+    healthcheck_url: ""
+    healthcheck_timeout: 10
+  tasks:
+    - name: Explain that HTTP checking needs a URL
+      ansible.builtin.debug:
+        msg: "Set -e healthcheck_url=https://example.invalid to check an endpoint."
+      when: healthcheck_url | length == 0
+
+    - name: Check the requested HTTP endpoint on Windows
+      ansible.windows.win_uri:
+        url: "{{ healthcheck_url }}"
+        method: GET
+        return_content: false
+        timeout: "{{ healthcheck_timeout }}"
+        status_code: [200, 201, 202, 204, 301, 302, 401, 403]
+      register: windows_http_check
+      changed_when: false
+      failed_when: false
+      when: healthcheck_url | length > 0
+
+    - name: Display the Windows HTTP result
+      ansible.builtin.debug:
+        var: windows_http_check
+      when: healthcheck_url | length > 0

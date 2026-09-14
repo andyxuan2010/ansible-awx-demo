@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  role_name: linux_package_cache
+  author: ansible-demo
+  description: Opt-in Linux package-cache refresh and cleanup
+  license: MIT
+  min_ansible_version: "2.15"
+dependencies: []

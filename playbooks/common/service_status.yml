@@ -1,0 +1,31 @@
+---
+- name: Report Linux service status
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, services]
+  vars:
+    linux_service_name: sshd
+  tasks:
+    - name: Collect Linux service facts
+      ansible.builtin.service_facts:
+
+    - name: Display requested Linux service status
+      ansible.builtin.debug:
+        msg: "{{ ansible_facts.services[linux_service_name] | default({'status': 'not-found'}) }}"
+
+- name: Report Windows service status
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, services]
+  vars:
+    windows_service_name: sshd
+  tasks:
+    - name: Collect Windows service information
+      ansible.windows.win_service_info:
+        name: "{{ windows_service_name }}"
+      register: windows_service
+
+    - name: Display requested Windows service status
+      ansible.builtin.debug:
+        var: windows_service.services

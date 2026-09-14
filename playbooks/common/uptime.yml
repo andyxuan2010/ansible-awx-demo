@@ -1,0 +1,34 @@
+---
+- name: Report Linux uptime
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, uptime]
+  tasks:
+    - name: Read Linux uptime
+      ansible.builtin.command: uptime
+      register: linux_uptime
+      changed_when: false
+
+    - name: Display Linux uptime
+      ansible.builtin.debug:
+        msg: "{{ linux_uptime.stdout }}"
+
+- name: Report Windows uptime
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, uptime]
+  tasks:
+    - name: Read Windows last boot time
+      ansible.windows.win_powershell:
+        script: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          [PSCustomObject]@{
+              LastBoot = $os.LastBootUpTime
+              Uptime   = (Get-Date) - $os.LastBootUpTime
+          }
+      register: windows_uptime
+      changed_when: false
+
+    - name: Display Windows uptime
+      ansible.builtin.debug:
+        var: windows_uptime.output

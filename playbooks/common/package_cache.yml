@@ -1,0 +1,8 @@
+---
+- name: Maintain Linux package metadata caches
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+  tags: [maintenance, packages]
+  roles:
+    - role: linux_package_cache

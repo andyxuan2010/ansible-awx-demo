@@ -1,0 +1,24 @@
+---
+- name: Test Linux connectivity
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [connectivity]
+  tasks:
+    - name: Ping Linux host
+      ansible.builtin.ping:
+
+- name: Test Site A Windows connectivity
+  hosts: "managed_nodes:&site_a:&windows"
+  gather_facts: false
+  tags: [connectivity]
+  tasks:
+    - name: Ping Site A Windows host
+      ansible.windows.win_ping:
+
+- name: Test Site B Windows connectivity
+  hosts: "managed_nodes:&site_b:&windows"
+  gather_facts: false
+  tags: [connectivity]
+  tasks:
+    - name: Ping Site B Windows host
+      ansible.windows.win_ping:

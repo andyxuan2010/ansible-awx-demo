@@ -1,0 +1,3 @@
+---
+# Compatibility entry point. The implementation lives in common/connectivity.yml.
+- import_playbook: common/connectivity.yml  # noqa name[play]

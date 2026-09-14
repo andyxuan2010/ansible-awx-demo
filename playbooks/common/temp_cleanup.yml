@@ -1,0 +1,62 @@
+---
+- name: Audit or clean Linux temporary files
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [maintenance, storage]
+  vars:
+    apply_changes: false
+    temp_file_age: 7d
+    linux_temp_paths:
+      - /tmp
+      - /var/tmp
+  tasks:
+    - name: Find old Linux temporary files
+      ansible.builtin.find:
+        paths: "{{ linux_temp_paths }}"
+        age: "{{ temp_file_age }}"
+        age_stamp: atime
+        file_type: file
+        recurse: true
+      register: linux_temp_files
+
+    - name: Display Linux temporary file count
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} has {{ linux_temp_files.matched }} temporary files older than {{ temp_file_age }}."
+
+    - name: Remove old Linux temporary files when explicitly requested
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ linux_temp_files.files }}"
+      when: apply_changes | bool
+
+- name: Audit or clean Windows temporary files
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [maintenance, storage]
+  vars:
+    apply_changes: false
+    temp_file_age_days: 7
+    windows_temp_paths:
+      - 'C:\Windows\Temp'
+  tasks:
+    - name: Find old Windows temporary files
+      ansible.windows.win_find:
+        paths: "{{ windows_temp_paths }}"
+        age: "{{ temp_file_age_days }}d"
+        age_stamp: LastWriteTime
+        file_type: file
+        recurse: true
+      register: windows_temp_files
+
+    - name: Display Windows temporary file count
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} has {{ windows_temp_files.matched }} temporary files older than {{ temp_file_age_days }} days."
+
+    - name: Remove old Windows temporary files when explicitly requested
+      ansible.windows.win_file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ windows_temp_files.files }}"
+      when: apply_changes | bool

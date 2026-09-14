@@ -1,0 +1,37 @@
+---
+- name: Resolve a DNS name from Linux hosts
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, network]
+  vars:
+    dns_lookup_name: "{{ inventory_hostname }}"
+  tasks:
+    - name: Resolve the requested DNS name on Linux
+      ansible.builtin.command: "getent ahosts {{ dns_lookup_name }}"
+      register: linux_dns_lookup
+      changed_when: false
+      failed_when: false
+
+    - name: Display the Linux DNS result
+      ansible.builtin.debug:
+        var: linux_dns_lookup.stdout_lines
+
+- name: Resolve a DNS name from Windows hosts
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, network]
+  vars:
+    dns_lookup_name: "{{ inventory_hostname }}"
+  tasks:
+    - name: Resolve the requested DNS name on Windows
+      ansible.windows.win_powershell:
+        script: |
+          Resolve-DnsName -Name '{{ dns_lookup_name }}' -ErrorAction SilentlyContinue |
+            Select-Object Name, Type, IPAddress
+      register: windows_dns_lookup
+      changed_when: false
+      failed_when: false
+
+    - name: Display the Windows DNS result
+      ansible.builtin.debug:
+        var: windows_dns_lookup.output

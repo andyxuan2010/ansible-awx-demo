@@ -1,0 +1,46 @@
+---
+- name: Install common tools on Linux when explicitly requested
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+  tags: [software]
+  vars:
+    apply_changes: false
+    linux_common_packages:
+      - curl
+      - git
+  tasks:
+    - name: Explain that Linux tool installation is disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true to install {{ linux_common_packages | join(', ') }}."
+      when: not (apply_changes | bool)
+
+    - name: Install common Linux tools
+      ansible.builtin.package:
+        name: "{{ linux_common_packages }}"
+        state: present
+      when: apply_changes | bool
+
+- name: Install Git on Windows through WinGet when explicitly requested
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [software]
+  vars:
+    apply_changes: false
+  tasks:
+    - name: Explain that Windows tool installation is disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true to install Git through WinGet."
+      when: not (apply_changes | bool)
+
+    - name: Install Git through WinGet
+      ansible.windows.win_powershell:
+        script: |
+          $winget = Get-Command winget.exe -ErrorAction Stop
+          & $winget.Source install --id Git.Git --exact --silent `
+            --accept-package-agreements --accept-source-agreements
+          if ($LASTEXITCODE -ne 0) {
+              throw "WinGet failed with exit code $LASTEXITCODE"
+          }
+          $Ansible.Changed = $true
+      when: apply_changes | bool

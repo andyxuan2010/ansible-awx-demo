@@ -1,0 +1,14 @@
+---
+- name: Demonstrate a read-only role on Linux hosts
+  hosts: "managed_nodes:&linux"
+  gather_facts: true
+  tags: [example, awx]
+  roles:
+    - role: awx_demo_report
+
+- name: Demonstrate a read-only role on Windows hosts
+  hosts: "managed_nodes:&windows"
+  gather_facts: true
+  tags: [example, awx]
+  roles:
+    - role: awx_demo_report

@@ -1,0 +1,26 @@
+---
+- name: Install net-tools on all Ubuntu hosts
+  hosts: "managed_nodes:&ubuntu"
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Verify that the target is Ubuntu
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == "Ubuntu"
+        fail_msg: >-
+          {{ inventory_hostname }} is not Ubuntu.
+          Actual OS: {{ ansible_facts.distribution }}
+
+    - name: Refresh APT package indexes
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+        update_cache_retries: 5
+        update_cache_retry_max_delay: 12
+
+    - name: Install net-tools
+      ansible.builtin.apt:
+        name: net-tools
+        state: present

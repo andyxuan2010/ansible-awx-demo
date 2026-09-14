@@ -1,0 +1,216 @@
+---
+- name: Ensure WinGet and Chocolatey are installed and working
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  serial: 2
+
+  tasks:
+
+    # ---------------------------------------------------------
+    # Preflight
+    # ---------------------------------------------------------
+
+    - name: Get Windows version information
+      ansible.windows.win_powershell:
+        script: |
+          $os = Get-CimInstance Win32_OperatingSystem
+
+          [PSCustomObject]@{
+              Caption     = $os.Caption
+              Version     = $os.Version
+              BuildNumber = [int]$os.BuildNumber
+          }
+      register: windows_version
+      changed_when: false
+
+    - name: Display Windows version
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}:
+          {{ windows_version.output[0].Caption }}
+          version {{ windows_version.output[0].Version }}
+          build {{ windows_version.output[0].BuildNumber }}
+
+    - name: Verify Windows version supports WinGet
+      ansible.builtin.assert:
+        that:
+          - windows_version.output[0].BuildNumber | int >= 17763
+        fail_msg: >-
+          {{ inventory_hostname }} is running Windows build
+          {{ windows_version.output[0].BuildNumber }}.
+          WinGet requires Windows 10 1809/build 17763 or newer.
+        success_msg: "Windows version supports WinGet."
+
+
+    # ---------------------------------------------------------
+    # WinGet
+    # ---------------------------------------------------------
+
+    - name: Check whether WinGet currently works
+      ansible.windows.win_powershell:
+        script: |
+          $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+
+          if ($winget) {
+              try {
+                  $version = & winget.exe --version
+
+                  [PSCustomObject]@{
+                      Installed = $true
+                      Working   = ($LASTEXITCODE -eq 0)
+                      Version   = $version
+                      Path      = $winget.Source
+                  }
+              }
+              catch {
+                  [PSCustomObject]@{
+                      Installed = $true
+                      Working   = $false
+                      Version   = $null
+                      Path      = $winget.Source
+                  }
+              }
+          }
+          else {
+              [PSCustomObject]@{
+                  Installed = $false
+                  Working   = $false
+                  Version   = $null
+                  Path      = $null
+              }
+          }
+      register: winget_check
+      changed_when: false
+
+    - name: Show current WinGet status
+      ansible.builtin.debug:
+        var: winget_check.output[0]
+
+    - name: Bootstrap or repair WinGet when unavailable
+      ansible.windows.win_powershell:
+        script: |
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+
+          # PowerShell Gallery on older Windows PowerShell versions
+          # may require TLS 1.2.
+          [Net.ServicePointManager]::SecurityProtocol = `
+              [Net.ServicePointManager]::SecurityProtocol -bor `
+              [Net.SecurityProtocolType]::Tls12
+
+          # Install NuGet provider when required.
+          if (-not (Get-PackageProvider -Name NuGet `
+                    -ListAvailable `
+                    -ErrorAction SilentlyContinue)) {
+
+              Install-PackageProvider `
+                  -Name NuGet `
+                  -Force `
+                  -Scope CurrentUser | Out-Null
+          }
+
+          # Install/update Microsoft's WinGet management module.
+          Install-Module `
+              -Name Microsoft.WinGet.Client `
+              -Repository PSGallery `
+              -Force `
+              -Scope CurrentUser `
+              -Confirm:$false
+
+          Import-Module Microsoft.WinGet.Client -Force
+
+          # Microsoft's supported repair/bootstrap mechanism.
+          Repair-WinGetPackageManager -AllUsers
+
+          $Ansible.Changed = $true
+      when:
+        - not winget_check.output[0].Installed
+          or not winget_check.output[0].Working
+
+
+    # ---------------------------------------------------------
+    # Chocolatey
+    # ---------------------------------------------------------
+
+    - name: Ensure Chocolatey is installed
+      chocolatey.chocolatey.win_chocolatey:
+        name: chocolatey
+        state: present
+
+
+    # ---------------------------------------------------------
+    # Reset SSH session
+    # Important after PATH/AppX/package-manager changes
+    # ---------------------------------------------------------
+
+    - name: Reset Ansible connection
+      ansible.builtin.meta: reset_connection
+
+
+    # ---------------------------------------------------------
+    # Verify WinGet
+    # ---------------------------------------------------------
+
+    - name: Verify WinGet works
+      ansible.windows.win_powershell:
+        script: |
+          $winget = Get-Command winget.exe -ErrorAction Stop
+          $version = & winget.exe --version
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "winget.exe returned exit code $LASTEXITCODE"
+          }
+
+          [PSCustomObject]@{
+              Version = $version
+              Path    = $winget.Source
+          }
+      register: winget_verify
+      changed_when: false
+
+    - name: Display WinGet version
+      ansible.builtin.debug:
+        msg: >-
+          WinGet working on {{ inventory_hostname }}:
+          {{ winget_verify.output[0].Version }}
+
+
+    # ---------------------------------------------------------
+    # Verify Chocolatey
+    # ---------------------------------------------------------
+
+    - name: Verify Chocolatey works
+      ansible.windows.win_powershell:
+        script: |
+          $choco = Get-Command choco.exe -ErrorAction Stop
+          $version = & choco.exe --version
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "choco.exe returned exit code $LASTEXITCODE"
+          }
+
+          [PSCustomObject]@{
+              Version = $version
+              Path    = $choco.Source
+          }
+      register: choco_verify
+      changed_when: false
+
+    - name: Display Chocolatey version
+      ansible.builtin.debug:
+        msg: >-
+          Chocolatey working on {{ inventory_hostname }}:
+          {{ choco_verify.output[0].Version }}
+
+
+    # ---------------------------------------------------------
+    # Final result
+    # ---------------------------------------------------------
+
+    - name: Package manager readiness summary
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "WinGet: {{ winget_verify.output[0].Version }}"
+          - "Chocolatey: {{ choco_verify.output[0].Version }}"
+          - "Status: READY"

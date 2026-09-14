@@ -1,0 +1,5 @@
+# Replace these constraints with the versions approved and tested by your platform team.
+ansible-core==2.19.13
+pywinrm==0.5.0
+# Install the following only when Kerberos is used by the Windows inventory:
+# pywinrm[kerberos]==0.5.0

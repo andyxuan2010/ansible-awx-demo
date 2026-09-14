@@ -1,0 +1,3 @@
+---
+windows_update_audit_days: 30
+windows_update_audit_limit: 10

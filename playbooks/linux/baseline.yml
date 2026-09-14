@@ -1,0 +1,25 @@
+---
+- name: Linux baseline
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    - name: Install Git
+      ansible.builtin.package:
+        name: git
+        state: present
+
+    - name: Install curl
+      ansible.builtin.package:
+        name: curl
+        state: present
+
+    - name: Create automation directory
+      ansible.builtin.file:
+        path: /opt/automation
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"

@@ -1,0 +1,10 @@
+---
+- name: Smoke-test exposed Ubuntu hardening safe defaults
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    node_id: demo-ubuntu-02
+    exposed_ubuntu_hardening_apply: false
+  roles:
+    - exposed_ubuntu_hardening

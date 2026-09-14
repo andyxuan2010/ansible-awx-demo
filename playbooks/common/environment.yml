@@ -1,0 +1,31 @@
+---
+- name: Report the Linux environment
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, environment]
+  tasks:
+    - name: Collect Linux environment variables
+      ansible.builtin.command: env
+      register: linux_environment
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux environment variables
+      ansible.builtin.debug:
+        var: linux_environment.stdout_lines
+
+- name: Report the Windows environment
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, environment]
+  tasks:
+    - name: Collect Windows environment variables
+      ansible.windows.win_powershell:
+        script: 'Get-ChildItem Env: | Sort-Object Name | Select-Object Name, Value'
+      register: windows_environment
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows environment variables
+      ansible.builtin.debug:
+        var: windows_environment.output

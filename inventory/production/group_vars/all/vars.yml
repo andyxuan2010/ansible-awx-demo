@@ -1,0 +1,5 @@
+---
+baseline_packages: []
+baseline_managed_marker_path: /etc/ansible-management
+ansible_ssh_common_args: >-
+  -o StrictHostKeyChecking=accept-new

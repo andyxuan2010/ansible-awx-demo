@@ -1,0 +1,30 @@
+---
+- name: Report Linux time synchronization
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, time]
+  tasks:
+    - name: Inspect Linux time synchronization
+      ansible.builtin.command: timedatectl show --property=Timezone,NTP,NTPSynchronized
+      register: linux_time_sync
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux time synchronization
+      ansible.builtin.debug:
+        var: linux_time_sync.stdout_lines
+
+- name: Report Windows time synchronization
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, time]
+  tasks:
+    - name: Inspect Windows time synchronization
+      ansible.windows.win_command: w32tm.exe /query /status
+      register: windows_time_sync
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows time synchronization
+      ansible.builtin.debug:
+        var: windows_time_sync.stdout_lines

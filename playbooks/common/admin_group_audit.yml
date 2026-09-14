@@ -1,0 +1,38 @@
+---
+- name: Audit Linux administrative groups
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [security, audit]
+  vars:
+    linux_admin_groups:
+      - sudo
+      - wheel
+  tasks:
+    - name: Collect Linux administrative group membership
+      ansible.builtin.getent:
+        database: group
+        split: ':'
+
+    - name: Display Linux administrative groups
+      ansible.builtin.debug:
+        msg: "{{ item }}: {{ ansible_facts.getent_group[item][2] | default('not-found') }}"
+      loop: "{{ linux_admin_groups }}"
+
+- name: Audit Windows local administrators
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [security, audit]
+  tasks:
+    - name: Collect Windows local administrators
+      ansible.windows.win_powershell:
+        script: |
+          Get-LocalGroupMember -Group Administrators -ErrorAction SilentlyContinue |
+            Select-Object Name, ObjectClass, PrincipalSource
+      register: windows_admins
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows local administrators
+      ansible.builtin.debug:
+        var: windows_admins.output

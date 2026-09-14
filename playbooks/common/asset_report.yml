@@ -1,0 +1,14 @@
+---
+- name: Report Linux asset metadata
+  hosts: "managed_nodes:&linux"
+  gather_facts: true
+  tags: [audit, report]
+  roles:
+    - role: common_asset_report
+
+- name: Report Windows asset metadata
+  hosts: "managed_nodes:&windows"
+  gather_facts: true
+  tags: [audit, report]
+  roles:
+    - role: common_asset_report

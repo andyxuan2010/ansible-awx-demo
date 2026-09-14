@@ -1,0 +1,3 @@
+---
+# Compatibility entry point. The implementation lives in windows/packaging.yml.
+- import_playbook: windows/packaging.yml  # noqa name[play]

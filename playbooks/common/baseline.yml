@@ -1,0 +1,31 @@
+---
+- name: Apply the Linux baseline
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+  tags:
+    - baseline
+    - linux
+  roles:
+    - role: baseline
+      tags:
+        - baseline
+        - marker
+    - role: linux_automation_baseline
+      tags:
+        - baseline
+        - packages
+        - directories
+
+- name: Apply the Windows baseline
+  hosts: "managed_nodes:&windows"
+  gather_facts: true
+  tags:
+    - baseline
+    - windows
+  roles:
+    - role: windows_management_marker
+      tags:
+        - baseline
+        - marker
+        - directories

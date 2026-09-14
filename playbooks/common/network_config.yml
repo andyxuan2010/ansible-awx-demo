@@ -1,0 +1,31 @@
+---
+- name: Report Linux network configuration
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, network]
+  tasks:
+    - name: Collect Linux addresses and routes
+      ansible.builtin.command: ip -brief address
+      register: linux_network
+      changed_when: false
+
+    - name: Display Linux network configuration
+      ansible.builtin.debug:
+        var: linux_network.stdout_lines
+
+- name: Report Windows network configuration
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, network]
+  tasks:
+    - name: Collect Windows addresses and gateways
+      ansible.windows.win_powershell:
+        script: |
+          Get-NetIPConfiguration |
+            Select-Object InterfaceAlias, IPv4Address, IPv4DefaultGateway, DnsServer
+      register: windows_network
+      changed_when: false
+
+    - name: Display Windows network configuration
+      ansible.builtin.debug:
+        var: windows_network.output

@@ -1,0 +1,3 @@
+---
+# Compatibility entry point. The implementation lives in linux/install_fail2ban.yml.
+- import_playbook: linux/install_fail2ban.yml  # noqa name[play]

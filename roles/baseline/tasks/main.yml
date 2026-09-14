@@ -1,0 +1,24 @@
+---
+- name: Install optional baseline packages
+  ansible.builtin.package:
+    name: "{{ baseline_packages }}"
+    state: present
+  when: baseline_packages | length > 0
+
+- name: Create the Ansible management marker directory
+  ansible.builtin.file:
+    path: "{{ baseline_managed_marker_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: baseline_manage_marker
+
+- name: Write node management metadata
+  ansible.builtin.template:
+    src: managed-by.j2
+    dest: "{{ baseline_managed_marker_path }}/managed-by"
+    owner: root
+    group: root
+    mode: '0644'
+  when: baseline_manage_marker

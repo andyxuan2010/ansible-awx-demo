@@ -1,0 +1,12 @@
+---
+- name: Create the Windows management marker directory
+  ansible.windows.win_file:
+    path: "{{ windows_management_marker_directory }}"
+    state: directory
+  when: windows_management_marker_enabled | bool
+
+- name: Write the Windows management marker
+  ansible.windows.win_template:
+    src: managed-by.txt.j2
+    dest: "{{ windows_management_marker_path }}"
+  when: windows_management_marker_enabled | bool

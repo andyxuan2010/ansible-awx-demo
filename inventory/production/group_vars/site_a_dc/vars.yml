@@ -1,0 +1,3 @@
+---
+# Supply domain-controller credentials through AWX or an external secret store.
+{}

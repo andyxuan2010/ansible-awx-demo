@@ -1,0 +1,34 @@
+---
+- name: Report Linux listening ports
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [audit, network]
+  tasks:
+    - name: Collect Linux listening sockets
+      ansible.builtin.command: ss -lntup
+      register: linux_listening_ports
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux listening sockets
+      ansible.builtin.debug:
+        var: linux_listening_ports.stdout_lines
+
+- name: Report Windows listening ports
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [audit, network]
+  tasks:
+    - name: Collect Windows listening sockets
+      ansible.windows.win_powershell:
+        script: |
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+            Sort-Object LocalPort |
+            Select-Object LocalAddress, LocalPort, OwningProcess
+      register: windows_listening_ports
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows listening sockets
+      ansible.builtin.debug:
+        var: windows_listening_ports.output

@@ -1,0 +1,40 @@
+---
+- name: Report Linux resource usage
+  hosts: "managed_nodes:&linux"
+  gather_facts: true
+  tags: [diagnostics, resources]
+  tasks:
+    - name: Collect Linux memory and load
+      ansible.builtin.command: free -h
+      register: linux_memory
+      changed_when: false
+
+    - name: Display Linux resources
+      ansible.builtin.debug:
+        msg:
+          - "CPU cores: {{ ansible_processor_vcpus | default('unknown') }}"
+          - "Load: {{ ansible_loadavg | default({}) }}"
+          - "Memory: {{ linux_memory.stdout_lines }}"
+
+- name: Report Windows resource usage
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, resources]
+  tasks:
+    - name: Collect Windows CPU and memory
+      ansible.windows.win_powershell:
+        script: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          $cpu = Get-CimInstance Win32_Processor |
+            Measure-Object -Property LoadPercentage -Average
+          [PSCustomObject]@{
+              CpuLoadPercent = [math]::Round($cpu.Average, 1)
+              MemoryTotalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
+              MemoryFreeGB = [math]::Round($os.FreePhysicalMemory / 1MB, 2)
+          }
+      register: windows_resources
+      changed_when: false
+
+    - name: Display Windows resources
+      ansible.builtin.debug:
+        var: windows_resources.output

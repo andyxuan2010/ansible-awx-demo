@@ -1,0 +1,45 @@
+---
+- name: Ensure a Linux service state when explicitly requested
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [maintenance, services]
+  vars:
+    apply_changes: false
+    ensure_service_name: sshd
+    ensure_service_state: started
+    ensure_service_enabled: true
+  tasks:
+    - name: Explain that Linux service changes are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true to manage {{ ensure_service_name }}."
+      when: not (apply_changes | bool)
+
+    - name: Ensure Linux service state
+      ansible.builtin.service:
+        name: "{{ ensure_service_name }}"
+        state: "{{ ensure_service_state }}"
+        enabled: "{{ ensure_service_enabled }}"
+      when: apply_changes | bool
+
+- name: Ensure a Windows service state when explicitly requested
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [maintenance, services]
+  vars:
+    apply_changes: false
+    ensure_service_name: sshd
+    ensure_service_state: started
+    ensure_service_start_mode: auto
+  tasks:
+    - name: Explain that Windows service changes are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true to manage {{ ensure_service_name }}."
+      when: not (apply_changes | bool)
+
+    - name: Ensure Windows service state
+      ansible.windows.win_service:
+        name: "{{ ensure_service_name }}"
+        state: "{{ ensure_service_state }}"
+        start_mode: "{{ ensure_service_start_mode }}"
+      when: apply_changes | bool

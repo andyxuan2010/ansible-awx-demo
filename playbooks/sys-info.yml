@@ -1,0 +1,3 @@
+---
+# Compatibility entry point. The implementation lives in common/system_facts.yml.
+- import_playbook: common/system_facts.yml  # noqa name[play]

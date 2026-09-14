@@ -1,0 +1,3 @@
+---
+# Compatibility entry point. The implementation lives in windows/enable_win_sshd.yml.
+- import_playbook: windows/enable_win_sshd.yml  # noqa name[play]

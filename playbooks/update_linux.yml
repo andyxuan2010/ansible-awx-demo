@@ -1,0 +1,3 @@
+---
+# Compatibility entry point. The implementation lives in linux/update_linux.yml.
+- import_playbook: linux/update_linux.yml  # noqa name[play]

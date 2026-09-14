@@ -1,0 +1,59 @@
+---
+- name: Check pending Linux updates
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+  tags: [diagnostics, updates]
+  tasks:
+    - name: Check Debian and Ubuntu updates
+      ansible.builtin.apt:
+        name: "*"
+        state: latest
+        only_upgrade: true
+        update_cache: true
+      check_mode: true
+      register: debian_updates
+      changed_when: false
+      when: ansible_facts.os_family == "Debian"
+
+    - name: Check Red Hat-family updates
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_only: true
+        nobest: true
+      check_mode: true
+      register: redhat_updates
+      changed_when: false
+      when:
+        - ansible_facts.os_family == "RedHat"
+        - ansible_facts.pkg_mgr in ["dnf", "dnf5"]
+
+    - name: Display pending Linux updates
+      ansible.builtin.debug:
+        msg:
+          - "APT check: {{ debian_updates | default({}) }}"
+          - "DNF check: {{ redhat_updates | default({}) }}"
+
+- name: Check pending Windows updates
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, updates]
+  tasks:
+    - name: Check whether WinGet is available
+      ansible.windows.win_powershell:
+        script: |
+          $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+          if ($winget) {
+              & winget.exe upgrade --include-unknown
+          }
+          else {
+              Write-Output 'WinGet is not installed; use Windows Update management.'
+          }
+      register: windows_updates
+      changed_when: false
+      failed_when: false
+
+    - name: Display pending Windows updates
+      ansible.builtin.debug:
+        var: windows_updates.output

@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  role_name: windows_update_audit
+  author: ansible-demo
+  description: Read-only Windows hotfix audit
+  license: MIT
+  min_ansible_version: "2.15"
+dependencies: []

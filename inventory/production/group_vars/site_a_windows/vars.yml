@@ -1,0 +1,6 @@
+---
+# Demo transport only. Supply credentials through an AWX Machine credential.
+ansible_connection: winrm
+ansible_port: 5986
+ansible_winrm_transport: ntlm
+ansible_winrm_server_cert_validation: ignore

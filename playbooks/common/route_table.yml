@@ -1,0 +1,34 @@
+---
+- name: Report Linux route tables
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [audit, network]
+  tasks:
+    - name: Collect Linux routes
+      ansible.builtin.command: ip route show
+      register: linux_routes
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux routes
+      ansible.builtin.debug:
+        var: linux_routes.stdout_lines
+
+- name: Report Windows route tables
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [audit, network]
+  tasks:
+    - name: Collect Windows IPv4 routes
+      ansible.windows.win_powershell:
+        script: |
+          Get-NetRoute -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+            Sort-Object DestinationPrefix, RouteMetric |
+            Select-Object DestinationPrefix, NextHop, InterfaceAlias, RouteMetric
+      register: windows_routes
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows routes
+      ansible.builtin.debug:
+        var: windows_routes.output

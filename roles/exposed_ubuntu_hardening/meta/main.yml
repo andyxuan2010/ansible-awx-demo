@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: ansible-management
+  description: Harden Ubuntu endpoints exposed outside the trusted LAN
+  license: MIT
+  min_ansible_version: "2.16"
+dependencies: []

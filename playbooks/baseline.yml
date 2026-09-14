@@ -1,0 +1,3 @@
+---
+# Compatibility entry point. The cross-platform implementation lives in common/baseline.yml.
+- import_playbook: common/baseline.yml  # noqa name[play]

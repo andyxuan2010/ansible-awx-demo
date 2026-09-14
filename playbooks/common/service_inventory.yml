@@ -1,0 +1,27 @@
+---
+- name: Inventory Linux services
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, services]
+  tasks:
+    - name: Collect Linux service facts
+      ansible.builtin.service_facts:
+
+    - name: Display Linux service names and states
+      ansible.builtin.debug:
+        msg: "{{ ansible_facts.services | dict2items | map(attribute='value') | map(attribute='name') | zip(ansible_facts.services | dict2items | map(attribute='value') | map(attribute='state')) | list }}"
+
+- name: Inventory Windows services
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, services]
+  tasks:
+    - name: Collect Windows service information
+      ansible.windows.win_service_info:
+      register: windows_services
+      failed_when: false
+
+    - name: Display Windows services
+      ansible.builtin.debug:
+        var: windows_services.services

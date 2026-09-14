@@ -1,0 +1,32 @@
+---
+- name: Report Linux mounts
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, storage]
+  tasks:
+    - name: Collect Linux mounted filesystems
+      ansible.builtin.command: findmnt --real --list --output TARGET,SOURCE,FSTYPE,OPTIONS
+      register: linux_mounts
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux mounts
+      ansible.builtin.debug:
+        var: linux_mounts.stdout_lines
+
+- name: Report Windows volumes
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, storage]
+  tasks:
+    - name: Collect Windows volumes
+      ansible.windows.win_powershell:
+        script: Get-Volume | Select-Object DriveLetter, FileSystemLabel, FileSystem, Size, SizeRemaining, HealthStatus
+      register: windows_mounts
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows volumes
+      ansible.builtin.debug:
+        var: windows_mounts.output

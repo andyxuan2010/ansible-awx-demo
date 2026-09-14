@@ -1,0 +1,18 @@
+---
+- name: Display the normalized asset report
+  ansible.builtin.debug:
+    msg:
+      label: "{{ common_asset_report_label }}"
+      inventory_hostname: "{{ inventory_hostname }}"
+      node_id: "{{ node_id | default(inventory_hostname) }}"
+      groups: >-
+        {{ group_names if common_asset_report_show_groups | bool else [] }}
+      operating_system: >-
+        {{ ansible_facts.distribution | default(ansible_facts.os_family | default('unknown')) }}
+      operating_system_version: "{{ ansible_facts.distribution_version | default('unknown') }}"
+      kernel: "{{ ansible_facts.kernel | default('unknown') }}"
+      ansible_connection: "{{ ansible_connection | default('unknown') }}"
+      ansible_user: "{{ ansible_user | default('unknown') }}"
+  tags:
+    - audit
+    - report

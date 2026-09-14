@@ -1,0 +1,7 @@
+# Managed by Ansible: exposed Ubuntu hardening.
+{% for setting in exposed_ubuntu_hardening_ssh_settings | dict2items | sort(attribute='key') %}
+{{ setting.key }} {{ setting.value }}
+{% endfor %}
+{% if exposed_ubuntu_hardening_disable_password_authentication | bool %}
+PasswordAuthentication no
+{% endif %}

@@ -1,0 +1,32 @@
+---
+- name: Inspect recently installed Windows hotfixes
+  ansible.windows.win_powershell:
+    script: |
+      $cutoff = (Get-Date).AddDays(-{{ windows_update_audit_days | int }})
+      $hotfixes = @(
+          Get-HotFix |
+              Sort-Object -Property InstalledOn -Descending |
+              Select-Object -First {{ windows_update_audit_limit | int }}
+      )
+      [PSCustomObject]@{
+          ComputerName = $env:COMPUTERNAME
+          AuditWindowDays = {{ windows_update_audit_days | int }}
+          RecentHotfixCount = @(
+              $hotfixes | Where-Object { $_.InstalledOn -ge $cutoff }
+          ).Count
+          Hotfixes = $hotfixes |
+              Select-Object HotFixID, Description, InstalledOn, InstalledBy
+      }
+  register: windows_update_audit_result
+  changed_when: false
+  failed_when: false
+  tags:
+    - audit
+    - updates
+
+- name: Display Windows update audit
+  ansible.builtin.debug:
+    var: windows_update_audit_result.output
+  tags:
+    - audit
+    - updates

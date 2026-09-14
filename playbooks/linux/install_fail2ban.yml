@@ -1,0 +1,39 @@
+---
+- name: Install and enable fail2ban on Linux hosts
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+
+  vars:
+    fail2ban_package_name: fail2ban
+    fail2ban_service_name: fail2ban
+    fail2ban_install_epel: true
+
+  tasks:
+    - name: Verify that the target is Linux
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.system == "Linux"
+        fail_msg: >-
+          {{ inventory_hostname }} is not Linux.
+          Actual system: {{ ansible_facts.system }}
+
+    - name: Install EPEL release package on Enterprise Linux
+      ansible.builtin.package:
+        name: epel-release
+        state: present
+      when:
+        - fail2ban_install_epel | bool
+        - ansible_facts.os_family == "RedHat"
+        - ansible_facts.distribution not in ["Fedora", "Amazon"]
+
+    - name: Install fail2ban
+      ansible.builtin.package:
+        name: "{{ fail2ban_package_name }}"
+        state: present
+
+    - name: Enable and start fail2ban
+      ansible.builtin.service:
+        name: "{{ fail2ban_service_name }}"
+        enabled: true
+        state: started

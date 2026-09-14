@@ -1,0 +1,108 @@
+---
+- name: Patch managed Linux systems
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+  serial: "{{ patch_serial }}"
+  any_errors_fatal: true
+  tags: [maintenance, patching]
+  vars:
+    apply_updates: false
+    patch_serial: 1
+    patch_reboot_after_updates: false
+    patch_reboot_timeout: 900
+    patch_reboot_pre_delay: 5
+    patch_reboot_post_delay: 30
+  tasks:
+    - name: Explain that Linux patching is disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_updates=true to patch {{ inventory_hostname }}."
+      when: not (apply_updates | bool)
+
+    - name: Update Debian and Ubuntu packages
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+        upgrade: dist
+      register: linux_patch_apt
+      when:
+        - apply_updates | bool
+        - ansible_facts.os_family == "Debian"
+
+    - name: Update Red Hat-family packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_only: true
+        nobest: true
+      register: linux_patch_dnf
+      when:
+        - apply_updates | bool
+        - ansible_facts.os_family == "RedHat"
+        - ansible_facts.distribution_major_version != "7"
+
+    - name: Update RHEL 7 packages
+      ansible.builtin.raw: yum -y update
+      register: linux_patch_rhel7
+      changed_when: apply_updates | bool
+      when:
+        - apply_updates | bool
+        - ansible_facts.os_family == "RedHat"
+        - ansible_facts.distribution_major_version == "7"
+
+  post_tasks:
+    - name: Reboot patched Linux host when explicitly requested
+      ansible.builtin.reboot:
+        reboot_timeout: "{{ patch_reboot_timeout }}"
+        pre_reboot_delay: "{{ patch_reboot_pre_delay }}"
+        post_reboot_delay: "{{ patch_reboot_post_delay }}"
+        test_command: whoami
+      when:
+        - apply_updates | bool
+        - patch_reboot_after_updates | bool
+        - >-
+          (linux_patch_apt.changed | default(false)) or
+          (linux_patch_dnf.changed | default(false)) or
+          (linux_patch_rhel7.changed | default(false))
+
+- name: Patch managed Windows systems
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  serial: "{{ patch_serial }}"
+  any_errors_fatal: true
+  tags: [maintenance, patching]
+  vars:
+    apply_updates: false
+    patch_serial: 1
+    patch_reboot_after_updates: false
+    patch_reboot_timeout: 900
+    patch_reboot_pre_delay: 5
+    patch_reboot_post_delay: 30
+  tasks:
+    - name: Explain that Windows patching is disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_updates=true to install Windows security updates on {{ inventory_hostname }}."
+      when: not (apply_updates | bool)
+
+    - name: Install Windows security and critical updates
+      ansible.windows.win_updates:
+        category_names:
+          - CriticalUpdates
+          - SecurityUpdates
+          - UpdateRollups
+        reboot: false
+        state: installed
+      register: windows_patch_result
+      when: apply_updates | bool
+
+  post_tasks:
+    - name: Reboot patched Windows host when explicitly requested
+      ansible.windows.win_reboot:
+        reboot_timeout: "{{ patch_reboot_timeout }}"
+        pre_reboot_delay: "{{ patch_reboot_pre_delay }}"
+        post_reboot_delay: "{{ patch_reboot_post_delay }}"
+        test_command: whoami
+      when:
+        - apply_updates | bool
+        - patch_reboot_after_updates | bool
+        - windows_patch_result.reboot_required | default(false)

@@ -1,0 +1,31 @@
+---
+- name: Report Linux scheduled tasks
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, scheduling]
+  tasks:
+    - name: Collect Linux systemd timers
+      ansible.builtin.command: systemctl list-timers --all --no-pager --no-legend  # noqa command-instead-of-module
+      register: linux_scheduled_tasks
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux scheduled tasks
+      ansible.builtin.debug:
+        var: linux_scheduled_tasks.stdout_lines
+
+- name: Report Windows scheduled tasks
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, scheduling]
+  tasks:
+    - name: Collect Windows scheduled tasks
+      ansible.windows.win_powershell:
+        script: Get-ScheduledTask | Select-Object TaskName, TaskPath, State
+      register: windows_scheduled_tasks
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows scheduled tasks
+      ansible.builtin.debug:
+        var: windows_scheduled_tasks.output

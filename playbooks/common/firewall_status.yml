@@ -1,0 +1,42 @@
+---
+- name: Report Linux firewall status
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, security]
+  tasks:
+    - name: Inspect common Linux firewall services
+      ansible.builtin.shell: |
+        if command -v firewall-cmd >/dev/null 2>&1; then
+          firewall-cmd --state
+        elif command -v ufw >/dev/null 2>&1; then
+          ufw status verbose
+        elif command -v nft >/dev/null 2>&1; then
+          nft list ruleset
+        else
+          echo "No supported firewall CLI found"
+        fi
+      register: linux_firewall
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux firewall status
+      ansible.builtin.debug:
+        var: linux_firewall.stdout_lines
+
+- name: Report Windows firewall status
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, security]
+  tasks:
+    - name: Inspect Windows firewall profiles
+      ansible.windows.win_powershell:
+        script: |
+          Get-NetFirewallProfile |
+            Select-Object Name, Enabled, DefaultInboundAction, DefaultOutboundAction
+      register: windows_firewall
+      changed_when: false
+
+    - name: Display Windows firewall status
+      ansible.builtin.debug:
+        var: windows_firewall.output

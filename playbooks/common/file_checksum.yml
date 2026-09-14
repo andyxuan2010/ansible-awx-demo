@@ -1,0 +1,40 @@
+---
+- name: Report a Linux file checksum
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, filesystem]
+  vars:
+    checksum_path: /etc/hosts
+  tasks:
+    - name: Calculate the Linux file checksum
+      ansible.builtin.stat:
+        path: "{{ checksum_path }}"
+        checksum_algorithm: sha256
+      register: linux_file_checksum
+
+    - name: Display the Linux file checksum
+      ansible.builtin.debug:
+        msg:
+          path: "{{ checksum_path }}"
+          exists: "{{ linux_file_checksum.stat.exists | default(false) }}"
+          checksum: "{{ linux_file_checksum.stat.checksum | default('not-found') }}"
+
+- name: Report a Windows file checksum
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, filesystem]
+  vars:
+    checksum_path: 'C:\Windows\System32\drivers\etc\hosts'
+  tasks:
+    - name: Calculate the Windows file checksum
+      ansible.windows.win_stat:
+        path: "{{ checksum_path }}"
+        checksum_algorithm: sha256
+      register: windows_file_checksum
+
+    - name: Display the Windows file checksum
+      ansible.builtin.debug:
+        msg:
+          path: "{{ checksum_path }}"
+          exists: "{{ windows_file_checksum.stat.exists | default(false) }}"
+          checksum: "{{ windows_file_checksum.stat.checksum | default('not-found') }}"

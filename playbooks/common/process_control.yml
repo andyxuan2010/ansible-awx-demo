@@ -1,0 +1,68 @@
+---
+- name: Audit or stop a Linux process
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [maintenance, processes]
+  vars:
+    apply_changes: false
+    process_name: ""
+  tasks:
+    - name: Explain that Linux process changes are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true and provide process_name to stop a process."
+      when: not (apply_changes | bool) or process_name | length == 0
+
+    - name: Find the Linux process
+      ansible.builtin.command: "pgrep -a -x {{ process_name }}"
+      register: linux_process
+      changed_when: false
+      failed_when: false
+      when: process_name | length > 0
+
+    - name: Display the Linux process
+      ansible.builtin.debug:
+        var: linux_process.stdout_lines
+      when: process_name | length > 0
+
+    - name: Stop the Linux process when explicitly requested
+      ansible.builtin.command: "pkill -TERM -x {{ process_name }}"
+      register: linux_process_stop
+      changed_when: linux_process_stop.rc == 0
+      failed_when: false
+      when:
+        - apply_changes | bool
+        - process_name | length > 0
+
+- name: Audit or stop a Windows process
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [maintenance, processes]
+  vars:
+    apply_changes: false
+    process_name: ""
+  tasks:
+    - name: Explain that Windows process changes are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true and provide process_name to stop a process."
+      when: not (apply_changes | bool) or process_name | length == 0
+
+    - name: Find the Windows process
+      ansible.windows.win_powershell:
+        script: Get-Process -Name '{{ process_name }}' -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, CPU
+      register: windows_process
+      changed_when: false
+      failed_when: false
+      when: process_name | length > 0
+
+    - name: Display the Windows process
+      ansible.builtin.debug:
+        var: windows_process.output
+      when: process_name | length > 0
+
+    - name: Stop the Windows process when explicitly requested
+      ansible.windows.win_powershell:
+        script: Get-Process -Name '{{ process_name }}' -ErrorAction SilentlyContinue | Stop-Process -Force
+      when:
+        - apply_changes | bool
+        - process_name | length > 0

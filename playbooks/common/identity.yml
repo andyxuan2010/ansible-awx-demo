@@ -1,0 +1,34 @@
+---
+- name: Report the Linux execution identity
+  hosts: "managed_nodes:&linux"
+  gather_facts: false
+  tags: [diagnostics, identity]
+  tasks:
+    - name: Collect Linux identity information
+      ansible.builtin.command: id
+      register: linux_identity
+      changed_when: false
+
+    - name: Display Linux identity information
+      ansible.builtin.debug:
+        var: linux_identity.stdout
+
+- name: Report the Windows execution identity
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, identity]
+  tasks:
+    - name: Collect Windows identity information
+      ansible.windows.win_powershell:
+        script: |
+          [pscustomobject]@{
+            User = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+            Computer = $env:COMPUTERNAME
+            IsAdministrator = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+          }
+      register: windows_identity
+      changed_when: false
+
+    - name: Display Windows identity information
+      ansible.builtin.debug:
+        var: windows_identity.output

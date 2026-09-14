@@ -1,0 +1,45 @@
+---
+- name: Ensure a standard Linux directory when explicitly requested
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [configuration, filesystem]
+  vars:
+    apply_changes: false
+    managed_directory_path: /opt/ansible-managed
+    managed_directory_owner: root
+    managed_directory_group: root
+    managed_directory_mode: "0755"
+  tasks:
+    - name: Explain that Linux directory changes are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true to manage {{ managed_directory_path }}."
+      when: not (apply_changes | bool)
+
+    - name: Ensure the standard Linux directory
+      ansible.builtin.file:
+        path: "{{ managed_directory_path }}"
+        state: directory
+        owner: "{{ managed_directory_owner }}"
+        group: "{{ managed_directory_group }}"
+        mode: "{{ managed_directory_mode }}"
+      when: apply_changes | bool
+
+- name: Ensure a standard Windows directory when explicitly requested
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [configuration, filesystem]
+  vars:
+    apply_changes: false
+    managed_directory_path: 'C:\ProgramData\AnsibleManaged'
+  tasks:
+    - name: Explain that Windows directory changes are disabled by default
+      ansible.builtin.debug:
+        msg: "Set -e apply_changes=true to manage {{ managed_directory_path }}."
+      when: not (apply_changes | bool)
+
+    - name: Ensure the standard Windows directory
+      ansible.windows.win_file:
+        path: "{{ managed_directory_path }}"
+        state: directory
+      when: apply_changes | bool

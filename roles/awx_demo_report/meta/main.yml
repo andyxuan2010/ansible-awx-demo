@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: ansible-management
+  description: Read-only execution-context report for AWX demonstrations
+  license: MIT
+  min_ansible_version: "2.16"
+dependencies: []

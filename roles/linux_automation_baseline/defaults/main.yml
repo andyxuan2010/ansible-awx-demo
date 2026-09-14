@@ -1,0 +1,8 @@
+---
+linux_automation_baseline_packages:
+  - git
+  - curl
+linux_automation_baseline_directory: /opt/automation
+linux_automation_baseline_owner: root
+linux_automation_baseline_group: root
+linux_automation_baseline_mode: "0755"

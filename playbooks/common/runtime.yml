@@ -1,0 +1,44 @@
+---
+- name: Report Linux automation runtime details
+  hosts: "managed_nodes:&linux"
+  gather_facts: true
+  tags: [diagnostics, runtime]
+  tasks:
+    - name: Collect the Linux Python runtime version
+      ansible.builtin.shell: |
+        set -o pipefail
+        python3 --version 2>&1 || python --version 2>&1
+      args:
+        executable: /bin/bash
+      register: linux_runtime
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux runtime details
+      ansible.builtin.debug:
+        msg:
+          ansible_python_interpreter: "{{ ansible_python_interpreter | default('auto') }}"
+          discovered_interpreter: "{{ ansible_facts.discovered_interpreter_python | default('unknown') }}"
+          python_version: "{{ linux_runtime.stdout }}"
+
+- name: Report Windows automation runtime details
+  hosts: "managed_nodes:&windows"
+  gather_facts: true
+  tags: [diagnostics, runtime]
+  tasks:
+    - name: Collect the Windows PowerShell runtime version
+      ansible.windows.win_powershell:
+        script: |
+          [pscustomobject]@{
+            PowerShell = $PSVersionTable.PSVersion.ToString()
+            OS = $PSVersionTable.OS
+            Architecture = $env:PROCESSOR_ARCHITECTURE
+            Python = if (Get-Command python.exe -ErrorAction SilentlyContinue) { (python.exe --version 2>&1).ToString() } else { 'not-installed' }
+          }
+      register: windows_runtime
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows runtime details
+      ansible.builtin.debug:
+        var: windows_runtime.output

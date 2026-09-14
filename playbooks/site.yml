@@ -1,0 +1,3 @@
+---
+# Compatibility entry point. The implementation lives in linux/site.yml.
+- import_playbook: linux/site.yml  # noqa name[play]

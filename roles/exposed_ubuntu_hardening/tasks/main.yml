@@ -1,0 +1,188 @@
+---
+- name: Verify the exposed endpoint is Ubuntu
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == "Ubuntu"
+      - (node_id | default(inventory_hostname)) in exposed_ubuntu_hardening_allowed_node_ids
+      - exposed_ubuntu_hardening_ssh_port | int > 0
+      - exposed_ubuntu_hardening_ssh_port | int < 65536
+    fail_msg: "{{ inventory_hostname }} is not an allowed exposed Ubuntu endpoint or has an invalid SSH port."
+  tags:
+    - always
+    - validation
+
+- name: Explain that exposed Ubuntu hardening is disabled by default
+  ansible.builtin.debug:
+    msg: "Set -e exposed_ubuntu_hardening_apply=true to harden {{ inventory_hostname }}."
+  when: not (exposed_ubuntu_hardening_apply | bool)
+  tags:
+    - audit
+
+- name: Verify the expected Tailscale interface before enabling UFW
+  ansible.builtin.assert:
+    that:
+      - exposed_ubuntu_hardening_ufw_interface in ansible_facts.interfaces
+    fail_msg: "{{ exposed_ubuntu_hardening_ufw_interface }} is not present on {{ inventory_hostname }}; refusing to enable UFW."
+  tags:
+    - always
+    - validation
+    - firewall
+  when:
+    - exposed_ubuntu_hardening_apply | bool
+    - exposed_ubuntu_hardening_enable_ufw | bool
+
+- name: Install exposed Ubuntu security packages
+  ansible.builtin.apt:
+    name: "{{ exposed_ubuntu_hardening_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - exposed_ubuntu_hardening_apply | bool
+    - exposed_ubuntu_hardening_packages | length > 0
+  tags:
+    - packages
+
+- name: Render and validate the SSH hardening drop-in
+  tags:
+    - ssh
+  when: exposed_ubuntu_hardening_apply | bool
+  block:
+    - name: Render the SSH hardening drop-in
+      ansible.builtin.template:
+        src: 00-ansible-management-hardening.conf.j2
+        dest: "{{ exposed_ubuntu_hardening_ssh_dropin_path }}"
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      register: exposed_ubuntu_hardening_ssh_dropin
+      notify: Restart SSH service
+
+    - name: Validate the complete SSH daemon configuration
+      ansible.builtin.command: /usr/sbin/sshd -t
+      changed_when: false
+
+  rescue:
+    - name: Restore the previous SSH hardening drop-in after validation failure
+      ansible.builtin.copy:
+        src: "{{ exposed_ubuntu_hardening_ssh_dropin.backup_file }}"
+        dest: "{{ exposed_ubuntu_hardening_ssh_dropin_path }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - exposed_ubuntu_hardening_ssh_dropin is defined
+        - exposed_ubuntu_hardening_ssh_dropin.changed | default(false)
+        - exposed_ubuntu_hardening_ssh_dropin.backup_file is defined
+
+    - name: Remove a new invalid SSH hardening drop-in after validation failure
+      ansible.builtin.file:
+        path: "{{ exposed_ubuntu_hardening_ssh_dropin_path }}"
+        state: absent
+      when:
+        - exposed_ubuntu_hardening_ssh_dropin is defined
+        - exposed_ubuntu_hardening_ssh_dropin.changed | default(false)
+        - exposed_ubuntu_hardening_ssh_dropin.backup_file is not defined
+
+    - name: Stop because the SSH daemon configuration is invalid
+      ansible.builtin.fail:
+        msg: "sshd -t rejected the hardening drop-in on {{ inventory_hostname }}; the previous configuration was restored."
+
+- name: Configure Fail2ban for SSH protection
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.d/sshd.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart Fail2ban
+  when: exposed_ubuntu_hardening_apply | bool
+  tags:
+    - fail2ban
+
+- name: Ensure Fail2ban is enabled and running
+  ansible.builtin.service:
+    name: fail2ban
+    enabled: true
+    state: started
+  when: exposed_ubuntu_hardening_apply | bool
+  tags:
+    - fail2ban
+
+- name: Configure unattended security updates
+  ansible.builtin.template:
+    src: 20auto-upgrades.j2
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+  when: exposed_ubuntu_hardening_apply | bool
+  tags:
+    - updates
+
+- name: Read current verbose UFW status
+  ansible.builtin.command: ufw status verbose
+  register: exposed_ubuntu_hardening_ufw_status
+  changed_when: false
+  failed_when: false
+  when:
+    - exposed_ubuntu_hardening_apply | bool
+    - exposed_ubuntu_hardening_enable_ufw | bool
+  tags:
+    - firewall
+
+- name: Set UFW default incoming policy to deny
+  ansible.builtin.command: ufw default deny incoming  # noqa command-instead-of-module
+  register: exposed_ubuntu_hardening_ufw_incoming
+  changed_when: "'changed to' in exposed_ubuntu_hardening_ufw_incoming.stdout"
+  when:
+    - exposed_ubuntu_hardening_apply | bool
+    - exposed_ubuntu_hardening_enable_ufw | bool
+  tags:
+    - firewall
+
+- name: Set UFW default outgoing policy to allow
+  ansible.builtin.command: ufw default allow outgoing  # noqa command-instead-of-module
+  register: exposed_ubuntu_hardening_ufw_outgoing
+  changed_when: "'changed to' in exposed_ubuntu_hardening_ufw_outgoing.stdout"
+  when:
+    - exposed_ubuntu_hardening_apply | bool
+    - exposed_ubuntu_hardening_enable_ufw | bool
+  tags:
+    - firewall
+
+- name: Allow the inventory-selected SSH port on the Tailscale interface
+  ansible.builtin.command:
+    argv:
+      - ufw
+      - allow
+      - in
+      - on
+      - "{{ exposed_ubuntu_hardening_ufw_interface }}"
+      - to
+      - any
+      - port
+      - "{{ exposed_ubuntu_hardening_ssh_port }}/tcp"
+      - proto
+      - tcp
+  register: exposed_ubuntu_hardening_ufw_ssh
+  changed_when: "'Rule added' in exposed_ubuntu_hardening_ufw_ssh.stdout"
+  when:
+    - exposed_ubuntu_hardening_apply | bool
+    - exposed_ubuntu_hardening_enable_ufw | bool
+    - "(exposed_ubuntu_hardening_ssh_port ~ '/tcp on ' ~ exposed_ubuntu_hardening_ufw_interface) not in exposed_ubuntu_hardening_ufw_status.stdout"
+  tags:
+    - firewall
+
+- name: Enable UFW with the configured SSH exception
+  ansible.builtin.command: ufw --force enable  # noqa command-instead-of-module
+  register: exposed_ubuntu_hardening_ufw_enable
+  changed_when: "'Firewall is active' in exposed_ubuntu_hardening_ufw_enable.stdout"
+  when:
+    - exposed_ubuntu_hardening_apply | bool
+    - exposed_ubuntu_hardening_enable_ufw | bool
+    - "'Status: inactive' in exposed_ubuntu_hardening_ufw_status.stdout"
+  tags:
+    - firewall

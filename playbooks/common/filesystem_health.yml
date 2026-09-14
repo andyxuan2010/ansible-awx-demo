@@ -1,0 +1,42 @@
+---
+- name: Report Linux filesystem health
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, storage]
+  vars:
+    filesystem_warning_percent: 15
+  tasks:
+    - name: Collect Linux filesystem free space
+      ansible.builtin.command: df -P -x tmpfs -x devtmpfs
+      register: linux_filesystem_health
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux filesystem health
+      ansible.builtin.debug:
+        var: linux_filesystem_health.stdout_lines
+
+- name: Report Windows filesystem health
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, storage]
+  vars:
+    filesystem_warning_percent: 15
+  tasks:
+    - name: Collect Windows filesystem health
+      ansible.windows.win_powershell:
+        script: |
+          Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
+            Select-Object DeviceID, Size, FreeSpace, VolumeName,
+              @{Name='FreePercent';Expression={
+                if ($_.Size) { [math]::Round(($_.FreeSpace / $_.Size) * 100, 1) }
+                else { 0 }
+              }}
+      register: windows_filesystem_health
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows filesystem health
+      ansible.builtin.debug:
+        var: windows_filesystem_health.output

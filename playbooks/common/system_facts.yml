@@ -1,0 +1,28 @@
+---
+- name: Report Linux system facts
+  hosts: "managed_nodes:&linux"
+  gather_facts: true
+  tags: [facts]
+  tasks:
+    - name: Display Linux identity
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "Hostname: {{ ansible_hostname }}"
+          - "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Kernel: {{ ansible_kernel }}"
+          - "Default IPv4: {{ ansible_default_ipv4.address | default('unknown') }}"
+
+- name: Report Windows system facts
+  hosts: "managed_nodes:&windows"
+  gather_facts: true
+  tags: [facts]
+  tasks:
+    - name: Display Windows identity
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "Hostname: {{ ansible_hostname }}"
+          - "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Kernel: {{ ansible_kernel }}"
+          - "Default IPv4: {{ ansible_default_ipv4.address | default('unknown') }}"

@@ -1,0 +1,14 @@
+---
+- name: Install Linux baseline packages
+  ansible.builtin.package:
+    name: "{{ linux_automation_baseline_packages }}"
+    state: present
+  when: linux_automation_baseline_packages | length > 0
+
+- name: Create the Linux automation directory
+  ansible.builtin.file:
+    path: "{{ linux_automation_baseline_directory }}"
+    state: directory
+    owner: "{{ linux_automation_baseline_owner }}"
+    group: "{{ linux_automation_baseline_group }}"
+    mode: "{{ linux_automation_baseline_mode }}"

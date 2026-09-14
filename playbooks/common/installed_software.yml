@@ -1,0 +1,31 @@
+---
+- name: Report installed Linux software
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: false
+  tags: [diagnostics, software]
+  tasks:
+    - name: Gather Linux package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Display Linux package count
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} has {{ ansible_facts.packages | length }} installed package names."
+
+- name: Report installed Windows software
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [diagnostics, software]
+  tasks:
+    - name: Gather Windows package summary
+      ansible.windows.win_powershell:
+        script: |
+          Get-Package |
+            Select-Object -First 100 Name, Version, ProviderName
+      register: windows_software
+      changed_when: false
+
+    - name: Display Windows package summary
+      ansible.builtin.debug:
+        var: windows_software.output

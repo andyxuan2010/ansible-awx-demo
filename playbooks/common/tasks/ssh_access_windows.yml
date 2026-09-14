@@ -1,0 +1,91 @@
+---
+- name: Optionally read the expected public key from the control node
+  ansible.builtin.set_fact:
+    ssh_audit_expected_key_data: >-
+      {{ (lookup('ansible.builtin.file', ssh_audit_public_key_file).split())[0:2]
+         | join(' ') }}
+  when: ssh_audit_public_key_file | length > 0
+  delegate_to: localhost
+  delegate_facts: true
+
+- name: Audit Windows OpenSSH service, port, account, and authorized keys
+  ansible.windows.win_shell: |
+    $userName = '{{ ssh_audit_user }}'
+    $user = Get-CimInstance Win32_UserAccount -Filter "Name='$userName' AND LocalAccount=True" |
+      Select-Object -First 1
+    $service = Get-CimInstance Win32_Service -Filter "Name='sshd'" |
+      Select-Object -First 1
+
+    if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
+      $port22Count = @(Get-NetTCPConnection -State Listen -LocalPort 22 -ErrorAction SilentlyContinue).Count
+    }
+    else {
+      $port22Count = @(netstat -ano | Select-String 'LISTENING\s+.*:22\s').Count
+    }
+
+    $keyPaths = @(
+      "C:\Users\$userName\.ssh\authorized_keys",
+      'C:\ProgramData\ssh\administrators_authorized_keys'
+    )
+    $existingKeyPaths = @()
+    $keyCount = 0
+    $expectedKeyFound = $false
+    $expectedKey = '{{ hostvars["localhost"].ssh_audit_expected_key_data | default("") }}'
+
+    foreach ($path in $keyPaths) {
+      if (Test-Path -LiteralPath $path -PathType Leaf) {
+        $existingKeyPaths += $path
+        foreach ($line in Get-Content -LiteralPath $path) {
+          if ($line -match '^\s*(ssh-ed25519|ssh-rsa|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)') {
+            $keyCount++
+            $parts = $line -split '\s+'
+            if ($expectedKey -and $parts.Count -ge 2 -and
+                (($parts[0] + ' ' + $parts[1]) -eq $expectedKey)) {
+              $expectedKeyFound = $true
+            }
+          }
+        }
+      }
+    }
+
+    [pscustomobject]@{
+      sshd_exists = $null -ne $service
+      sshd_state = if ($service) { $service.State } else { 'not_found' }
+      sshd_start_mode = if ($service) { $service.StartMode } else { 'not_found' }
+      ssh_service_enabled = [bool]($service -and $service.StartMode -match '^Auto')
+      ssh_service_running = [bool]($service -and $service.State -eq 'Running')
+      port_22_listening = $port22Count -gt 0
+      ansible_user_exists = $null -ne $user
+      ansible_user_enabled = if ($user) { -not $user.Disabled } else { $false }
+      authorized_keys_paths = $existingKeyPaths
+      authorized_key_count = $keyCount
+      expected_public_key_check = if (-not $expectedKey) { 'not_run' } elseif ($expectedKeyFound) { 'passed' } else { 'failed' }
+    } | ConvertTo-Json -Compress
+  register: windows_ssh_audit_raw
+  changed_when: false
+  failed_when: false
+
+- name: Identify the account used by this Ansible run
+  ansible.windows.win_shell: '$env:USERNAME'
+  register: windows_authenticated_user
+  changed_when: false
+  failed_when: false
+
+- name: Report Windows SSH access audit
+  ansible.builtin.debug:
+    msg:
+      host: "{{ inventory_hostname }}"
+      ssh_service_exists: "{{ (windows_ssh_audit_raw.stdout | from_json).sshd_exists }}"
+      ssh_service_state: "{{ (windows_ssh_audit_raw.stdout | from_json).sshd_state }}"
+      ssh_service_start_mode: "{{ (windows_ssh_audit_raw.stdout | from_json).sshd_start_mode }}"
+      ssh_service_enabled: "{{ (windows_ssh_audit_raw.stdout | from_json).ssh_service_enabled }}"
+      ssh_service_running: "{{ (windows_ssh_audit_raw.stdout | from_json).ssh_service_running }}"
+      port_22_listening: "{{ (windows_ssh_audit_raw.stdout | from_json).port_22_listening }}"
+      ansible_user_exists: "{{ (windows_ssh_audit_raw.stdout | from_json).ansible_user_exists }}"
+      ansible_user_enabled: "{{ (windows_ssh_audit_raw.stdout | from_json).ansible_user_enabled }}"
+      authorized_keys_paths: "{{ (windows_ssh_audit_raw.stdout | from_json).authorized_keys_paths }}"
+      authorized_key_count: "{{ (windows_ssh_audit_raw.stdout | from_json).authorized_key_count }}"
+      authenticated_windows_user: "{{ windows_authenticated_user.stdout | default('unknown') | trim }}"
+      authenticated_as_ansible: >-
+        {{ (windows_authenticated_user.stdout | default('') | trim) | lower == ssh_audit_user | lower }}
+      expected_public_key_check: "{{ (windows_ssh_audit_raw.stdout | from_json).expected_public_key_check }}"

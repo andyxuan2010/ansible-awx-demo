@@ -1,0 +1,45 @@
+---
+- name: Report Linux security status
+  hosts: "managed_nodes:&linux"
+  become: true
+  gather_facts: true
+  tags: [security, audit]
+  tasks:
+    - name: Collect Linux security information
+      ansible.builtin.shell: |
+        set -o pipefail
+        printf 'SELinux: '; getenforce 2>/dev/null || printf 'unavailable\n'
+        printf 'Failed units: '; systemctl --failed --no-legend --plain 2>/dev/null | wc -l
+        printf 'Last logins:\n'; last -n 5 2>/dev/null || true
+      register: linux_security
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux security information
+      ansible.builtin.debug:
+        var: linux_security.stdout_lines
+
+- name: Report Windows security status
+  hosts: "managed_nodes:&windows"
+  gather_facts: false
+  tags: [security, audit]
+  tasks:
+    - name: Collect Windows Defender status
+      ansible.windows.win_powershell:
+        script: |
+          $defender = Get-MpComputerStatus -ErrorAction SilentlyContinue
+          if ($defender) {
+              $defender |
+                Select-Object AntivirusEnabled, RealTimeProtectionEnabled,
+                  AntispywareEnabled, NISEnabled
+          }
+          else {
+              Write-Output 'Microsoft Defender status unavailable'
+          }
+      register: windows_security
+      changed_when: false
+      failed_when: false
+
+    - name: Display Windows security information
+      ansible.builtin.debug:
+        var: windows_security.output

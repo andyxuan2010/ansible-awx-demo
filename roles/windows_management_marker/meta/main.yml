@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: ansible-management
+  description: Write a reusable management marker on Windows hosts
+  license: MIT
+  min_ansible_version: "2.16"
+dependencies: []
