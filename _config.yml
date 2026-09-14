@@ -1,0 +1,9 @@
+# Ansible uses Jinja expressions such as {{ variable | default(value) }}.
+# Exclude YAML source files from Jekyll so those expressions are not parsed as
+# Liquid templates during the GitHub Pages build. Markdown documentation is
+# still rendered normally, including README.md as the site index.
+exclude:
+  - "*.yml"
+  - "*.yaml"
+  - "**/*.yml"
+  - "**/*.yaml"
