@@ -31,7 +31,7 @@ home: true
     <span>Common, Linux, Windows, and role-based examples with deliberate change controls.</span>
     <b>Browse playbooks <span aria-hidden="true">→</span></b>
   </a>
-  <a class="guide-card guide-card-orange" href="https://github.com/andyxuan2010/ansible-awx-demo/blob/main/roles/README.md">
+  <a class="guide-card guide-card-orange" href="roles.html">
     <span class="guide-icon">⌘</span>
     <strong>Reusable roles</strong>
     <span>Role conventions and safe examples for reporting, baselines, updates, and hardening.</span>

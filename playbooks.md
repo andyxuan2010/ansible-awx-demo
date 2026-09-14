@@ -1,3 +1,9 @@
+---
+layout: default
+title: Playbooks and usage
+permalink: /playbooks.html
+---
+
 # Playbooks and usage
 
 The public snapshot contains current cross-platform, Linux, Windows, and role
